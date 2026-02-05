@@ -1,0 +1,38 @@
+name: Daily Arxiv Fetcher
+
+on:
+  schedule:
+    # 每天 UTC 0:30 (北京时间 8:30) 运行
+    - cron: '30 0 * * *'
+  workflow_dispatch: # 允许手动触发
+
+permissions:
+  contents: write
+
+jobs:
+  fetch-papers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install -r scripts/requirements.txt
+
+      - name: Fetch and Update Inbox
+        run: |
+          python scripts/fetch_arxiv.py
+
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add Inbox.md
+          git commit -m "🤖 自动更新论文 $(date +'%Y-%m-%d')" || exit 0
+          git push

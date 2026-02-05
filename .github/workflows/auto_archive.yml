@@ -1,0 +1,38 @@
+name: Auto Archive & Organize
+
+on:
+  push:
+    paths:
+      - 'Inbox.md' # 仅当 Inbox.md 发生变化时触发
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  process-inbox:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install -r scripts/requirements.txt
+
+      - name: Process Inbox
+        run: |
+          python scripts/process_inbox.py
+
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add Papers/ Notes/ Contents.md Inbox.md
+          git commit -m "📚 论文已自动归档并更新目录" || exit 0
+          git push
