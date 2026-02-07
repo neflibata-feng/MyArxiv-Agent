@@ -2,83 +2,275 @@ import datetime
 import urllib.parse
 import feedparser
 import os
+import re
+import time
 
-# 配置：需要关注的 arXiv 分类
-CATEGORIES = ["cs.AI"]
-# 关键词过滤 (标题或摘要中必须包含)
-KEYWORDS = ["Agent"]
+import requests
 
-# 获取项目根目录 (假设 script 在 scripts/ 目录下)
+from typing import Optional, Any, Dict, List
+
+from config_loader import load_config, get_config_value
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+
+_ARXIV_ABS_RE = re.compile(r"arxiv\.org/abs/([^\s\)\]]+)", re.IGNORECASE)
+_CONTROL_CHARS_RE = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def _strip_control_chars(text: str) -> str:
+    return _CONTROL_CHARS_RE.sub("", text or "")
+
+
+def _maybe_clean_text(config, text: str) -> str:
+    if bool(get_config_value(config, "safety.strip_control_chars", True)):
+        return _strip_control_chars(text)
+    return text
+
+
+def _parse_arxiv_id_and_version(arxiv_id_with_optional_version: str):
+    raw = (arxiv_id_with_optional_version or "").strip()
+    if not raw:
+        return None, None
+
+    raw = raw.split("?")[0].split("#")[0]
+
+    m = re.match(r"^(?P<base>.+?)(?:v(?P<ver>\d+))?$", raw, re.IGNORECASE)
+    if not m:
+        return raw, None
+
+    base = m.group("base")
+    ver = m.group("ver")
+    try:
+        version = int(ver) if ver is not None else None
+    except Exception:
+        version = None
+    return base, version
+
+
+def _extract_abs_link(entry) -> Optional[str]:
+    try:
+        for l in getattr(entry, "links", []) or []:
+            if getattr(l, "rel", None) == "alternate" and getattr(l, "href", None):
+                return str(l.href)
+    except Exception:
+        pass
+    return str(getattr(entry, "link", "") or "") or None
+
+
+def _extract_arxiv_id_from_url(url: str):
+    if not url:
+        return None, None
+    m = _ARXIV_ABS_RE.search(url)
+    if not m:
+        return None, None
+    return _parse_arxiv_id_and_version(m.group(1))
+
+
+def _normalize_id_list(value: Any) -> List[str]:
+    """Normalize config `fetch.query.id_list` into a list of arXiv ids.
+
+    Supports:
+    - [] / list
+    - comma-separated string
+
+    Items may include versions (e.g. "cond-mat/0207270v1").
+    """
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(x).strip() for x in value if str(x).strip()]
+    if isinstance(value, str):
+        parts = [p.strip() for p in value.split(",")]
+        return [p for p in parts if p]
+    s = str(value).strip()
+    return [s] if s else []
+
+
+def _scan_existing_inbox_for_arxiv_versions(content: str):
+    versions = {}
+    if not content:
+        return versions
+
+    for match in _ARXIV_ABS_RE.finditer(content):
+        base, ver = _parse_arxiv_id_and_version(match.group(1))
+        if not base:
+            continue
+        old = versions.get(base)
+        if ver is None:
+            if old is None:
+                versions[base] = None
+            continue
+        if old is None or (isinstance(old, int) and ver > old):
+            versions[base] = ver
+    return versions
+
 def fetch_papers():
-    """
-    爬取 arXiv 数据
-    """
+    config = load_config(BASE_DIR)
+
     print(f"获取日期为 {datetime.date.today()}...")
+
+    base_url = get_config_value(
+        config,
+        "fetch.arxiv_api.base_url",
+        "https://export.arxiv.org/api/query",
+    )
+
+    sort_by = get_config_value(config, "fetch.arxiv_api.sort_by", "submittedDate")
+    sort_order = get_config_value(config, "fetch.arxiv_api.sort_order", "descending")
+    start = get_config_value(config, "fetch.arxiv_api.start", 0)
+    max_results = get_config_value(config, "fetch.arxiv_api.max_results", 150)
+
+    try:
+        start = int(start)
+    except Exception:
+        raise ValueError("fetch.arxiv_api.start 必须是 >= 0 的整数")
+    if start < 0:
+        raise ValueError("fetch.arxiv_api.start 必须是 >= 0 的整数（arXiv API 为 0-based）")
+
+    try:
+        max_results = int(max_results)
+    except Exception:
+        max_results = 150
+
+    if max_results > 2000:
+        print("max_results 超过 2000，将自动限制为 2000（arXiv API 限制）")
+        max_results = 2000
+    if max_results <= 0:
+        max_results = 1
+
+    timeout_seconds = get_config_value(config, "fetch.arxiv_api.http.timeout_seconds", 30)
+    retries = get_config_value(config, "fetch.arxiv_api.http.retries", 3)
+    backoff_seconds = get_config_value(config, "fetch.arxiv_api.http.backoff_seconds", 2)
+    min_delay_seconds = get_config_value(config, "fetch.arxiv_api.http.min_delay_seconds", 3)
+    user_agent = get_config_value(
+        config,
+        "fetch.arxiv_api.http.user_agent",
+        "MyArxiv-Agent/1.0 (+https://github.com/)",
+    )
+
+    categories = get_config_value(config, "fetch.query.categories", ["cs.AI"])
+    keywords = get_config_value(config, "fetch.query.keywords", ["Agent"])
+    keyword_field = get_config_value(config, "fetch.query.keyword_field", "all")
+    combine_mode = get_config_value(config, "fetch.query.combine_mode", "(cat_or) AND (kw_or)")
+    id_list = _normalize_id_list(get_config_value(config, "fetch.query.id_list", []))
     
-    base_url = 'http://export.arxiv.org/api/query?'
-    
-    # 构建查询
-    cat_query = ' OR '.join([f'cat:{c}' for c in CATEGORIES])
-    kw_query = ' OR '.join([f'all:{k}' for k in KEYWORDS])
-    
-    search_query = f'({cat_query}) AND ({kw_query})'
+    cat_query = " OR ".join([f"cat:{c}" for c in categories]) if categories else ""
+    kw_query = " OR ".join([f"{keyword_field}:{k}" for k in keywords]) if keywords else ""
+
+    if cat_query and kw_query:
+        search_query = str(combine_mode).replace("cat_or", cat_query).replace("kw_or", kw_query)
+    elif cat_query:
+        search_query = cat_query
+    elif kw_query:
+        search_query = kw_query
+    else:
+        search_query = "" if id_list else "all:agent"
     
     params = {
-        'search_query': search_query,
-        'start': 0,
-        'max_results': 150,  # 增加到 150 以确保不遗漏
-        'sortBy': 'submittedDate',
-        'sortOrder': 'descending'
+        'start': start,
+        'max_results': max_results,
+        'sortBy': sort_by,
+        'sortOrder': sort_order,
     }
-    
+    if search_query:
+        params['search_query'] = search_query
+    if id_list:
+        params['id_list'] = ",".join(id_list)
+
     query_string = urllib.parse.urlencode(params)
-    url = base_url + query_string
-    print(f"查询链接为: {url}")
-    
-    try:
-        feed = feedparser.parse(url)
-    except Exception as e:
-        print(f"获取数据错误: {e}")
+    url_for_print = f"{base_url}?{query_string}"
+    print(f"查询链接为: {url_for_print}")
+
+    last_error: Optional[Exception] = None
+    last_request_ts: Optional[float] = None
+    for attempt in range(int(retries) + 1):
+        try:
+            if last_request_ts is not None:
+                elapsed = time.time() - last_request_ts
+                try:
+                    min_delay = float(min_delay_seconds)
+                except Exception:
+                    min_delay = 3.0
+                if elapsed < min_delay:
+                    time.sleep(min_delay - elapsed)
+
+            resp = requests.get(
+                base_url,
+                params=params,
+                timeout=float(timeout_seconds),
+                headers={"User-Agent": str(user_agent)},
+            )
+            last_request_ts = time.time()
+            resp.raise_for_status()
+            feed = feedparser.parse(resp.text)
+            last_error = None
+            break
+        except Exception as e:
+            last_error = e
+            if attempt >= int(retries):
+                break
+            sleep_seconds = float(backoff_seconds) * (2**attempt)
+            try:
+                min_delay = float(min_delay_seconds)
+            except Exception:
+                min_delay = 3.0
+            sleep_seconds = max(sleep_seconds, min_delay)
+            print(f"获取数据错误(第{attempt+1}次): {e}; {sleep_seconds:.1f}s 后重试...")
+            time.sleep(sleep_seconds)
+
+    if last_error is not None:
+        print(f"获取数据错误: {last_error}")
         return []
 
     papers = []
     for entry in feed.entries:
         try:
-            # 提取信息
-            title = entry.title.replace('\n', ' ').strip()
-            link = entry.link
+            title = _maybe_clean_text(config, entry.title).replace('\n', ' ').strip()
+            link = _extract_abs_link(entry) or ""
+            arxiv_id, arxiv_version = _extract_arxiv_id_from_url(link)
             
-            # primary_category
             if hasattr(entry, 'arxiv_primary_category'):
                 category = entry.arxiv_primary_category['term']
             else:
                 category = 'Unknown'
             
-            # Authors
-            authors = [a.name for a in entry.authors]
-            if len(authors) > 1:
+            authors = [_maybe_clean_text(config, a.name) for a in entry.authors]
+            author_threshold = get_config_value(
+                config, "fetch.formatting.author_et_al_threshold", 1
+            )
+            if len(authors) > int(author_threshold):
                 author_str = f"{authors[0]} et al."
             elif len(authors) == 1:
                 author_str = authors[0]
             else:
                 author_str = "Unknown"
 
-            # Published Date
-            if hasattr(entry, 'published_parsed'):
-                pub_date = datetime.date(*entry.published_parsed[:3]).strftime("%Y-%m-%d")
+            date_source = str(get_config_value(config, "fetch.formatting.date_source", "published") or "published").strip().lower()
+            date_struct = None
+            if date_source == "updated" and hasattr(entry, 'updated_parsed'):
+                date_struct = entry.updated_parsed
+            elif hasattr(entry, 'published_parsed'):
+                date_struct = entry.published_parsed
+
+            if date_struct:
+                pub_date = datetime.date(*date_struct[:3]).strftime("%Y-%m-%d")
             else:
                 pub_date = "Unknown Date"
             
-            # Summary
-            summary = entry.summary.replace('\n', ' ').strip()
-            # 简单清理 LaTeX 标记
-            summary_hint = summary[:250] + "..." if len(summary) > 250 else summary
+            summary = _maybe_clean_text(config, entry.summary).replace('\n', ' ').strip()
+            summary_max_chars = get_config_value(config, "fetch.formatting.summary_max_chars", 250)
+            summary_hint = (
+                summary[: int(summary_max_chars)] + "..."
+                if len(summary) > int(summary_max_chars)
+                else summary
+            )
             
             papers.append({
                 'title': title,
                 'link': link,
+                'arxiv_id': arxiv_id,
+                'arxiv_version': arxiv_version,
                 'category': category,
                 'summary': summary_hint,
                 'published': pub_date,
@@ -91,40 +283,120 @@ def fetch_papers():
     return papers
 
 def update_inbox(papers):
-    """
-    将新论文追加到 Inbox.md 头部 (带去重功能)
-    """
+    config = load_config(BASE_DIR)
+
     if not papers:
         print("没有论文更新")
         return
 
-    file_path = os.path.join(BASE_DIR, "Inbox.md")
+    inbox_rel = get_config_value(config, "paths.inbox", "Inbox.md")
+    file_path = os.path.join(BASE_DIR, inbox_rel)
     today_str = datetime.date.today().strftime("%Y-%m-%d")
     
-    # --- 去重逻辑 ---
     existing_links = set()
+    existing_versions_by_id = {}
     if os.path.exists(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
-            for p in papers:
-                if p['link'] in content:
-                    existing_links.add(p['link'])
+            existing_versions_by_id = _scan_existing_inbox_for_arxiv_versions(content)
+            for m in re.finditer(r"\((https?://[^\)]+)\)", content):
+                existing_links.add(m.group(1))
+
+    dedupe_strategy = get_config_value(config, "fetch.dedupe.strategy", "link")
+    version_behavior = str(
+        get_config_value(config, "features.arxiv_version_update_behavior", "ignore")
+    ).strip().lower()
+    notice_tpl = get_config_value(
+        config,
+        "fetch.formatting.version_update_notice_template",
+        "- [ ] (版本更新) {date}：{arxiv_id} 从 v{old_version} 更新到 v{new_version} - [{title}]({link})",
+    )
+
+    new_papers = []
+    version_update_notices = []
+    replacements = {}
+
+    if str(dedupe_strategy).lower() == "arxiv_id":
+        for p in papers:
+            arxiv_id = p.get("arxiv_id")
+            new_version = p.get("arxiv_version")
+
+            if not arxiv_id:
+                if p.get("link") and p["link"] not in existing_links:
+                    new_papers.append(p)
+                continue
+
+            old_version = existing_versions_by_id.get(arxiv_id)
+
+            if arxiv_id not in existing_versions_by_id:
+                new_papers.append(p)
+                continue
+
+            if (
+                version_behavior in {"append_notice", "replace"}
+                and isinstance(new_version, int)
+                and isinstance(old_version, int)
+                and new_version > old_version
+            ):
+                if version_behavior == "replace":
+                    replacements[arxiv_id] = new_version
+                try:
+                    version_update_notices.append(
+                        notice_tpl.format(
+                            date=today_str,
+                            arxiv_id=arxiv_id,
+                            title=p.get("title", ""),
+                            link=p.get("link", ""),
+                            old_version=old_version,
+                            new_version=new_version,
+                        )
+                        + "\n"
+                    )
+                except Exception:
+                    pass
+    else:
+        for p in papers:
+            if p.get("link") and p["link"] not in existing_links:
+                new_papers.append(p)
     
-    new_papers = [p for p in papers if p['link'] not in existing_links]
-    
-    if not new_papers:
+    if not new_papers and not version_update_notices:
         print("没有论文更新")
         return
 
-    print(f"获取到 {len(papers)} 篇论文. 其中{len(new_papers)} 篇是新的")
-    # ----------------
+    if version_update_notices:
+        print(f"检测到 {len(version_update_notices)} 条版本更新")
+    if new_papers:
+        print(f"获取到 {len(papers)} 篇论文. 其中{len(new_papers)} 篇是新的")
     
     new_lines = []
-    new_lines.append(f"## {today_str} 更新 {len(new_papers)} 篇新论文\n")
+    heading_tpl = get_config_value(
+        config,
+        "fetch.formatting.daily_heading_template",
+        "## {date} 更新 {count} 篇新论文",
+    )
+    new_lines.append(
+        heading_tpl.format(date=today_str, count=(len(new_papers) + len(version_update_notices)))
+        + "\n"
+    )
+
+    for notice in version_update_notices:
+        new_lines.append(notice)
+
+    item_tpl = get_config_value(
+        config,
+        "fetch.formatting.item_template",
+        "- [ ] **[{category}]** [{title}]({link}) *by {author} ({published})* - _{summary}_",
+    )
     for p in new_papers:
-        # Markdown 格式优化
-        line = f"- [ ] **[{p['category']}]** [{p['title']}]({p['link']}) *by {p['author']} ({p['published']})* - _{p['summary']}_\n"
-        new_lines.append(line)
+        line = item_tpl.format(
+            category=p["category"],
+            title=p["title"],
+            link=p["link"],
+            author=p["author"],
+            published=p["published"],
+            summary=p["summary"],
+        )
+        new_lines.append(line + "\n")
     new_lines.append("\n")
 
     if os.path.exists(file_path):
@@ -133,9 +405,17 @@ def update_inbox(papers):
     else:
         old_lines = ["# 📥 My Arxiv Inbox\n\n", "这里是你的待阅读区。\n\n", "---\n\n"]
 
+    if replacements and os.path.exists(file_path):
+        joined = "".join(old_lines)
+        for base_id, latest_ver in replacements.items():
+            pattern = re.compile(rf"https?://arxiv\\.org/abs/{re.escape(base_id)}(?:v\\d+)?")
+            joined = pattern.sub(f"https://arxiv.org/abs/{base_id}v{latest_ver}", joined)
+        old_lines = joined.splitlines(keepends=True)
+
     insert_index = -1
+    delimiter = get_config_value(config, "fetch.formatting.inbox_insert_after_delimiter", "---")
     for i, line in enumerate(old_lines):
-        if line.strip() == "---":
+        if line.strip() == str(delimiter):
             insert_index = i + 1
             break
     
@@ -148,7 +428,7 @@ def update_inbox(papers):
     with open(file_path, "w", encoding="utf-8") as f:
         f.writelines(final_lines)
     
-    print(f"成功添加 {len(new_papers)} 篇论文至 {file_path}")
+    print(f"成功添加 {len(new_papers)} 篇论文、{len(version_update_notices)} 条版本提示 至 {file_path}")
 
 if __name__ == "__main__":
     papers = fetch_papers()

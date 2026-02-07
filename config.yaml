@@ -1,0 +1,141 @@
+# MyArxiv-Agent的全局配置
+
+# 版本配置
+meta:
+  config_version: 1
+  owner: "neflibata-feng"
+
+# 文件路径配置（相对根目录）
+paths:
+  # 收件箱
+  inbox: "Inbox.md"
+  # 目录
+  contents: "Contents.md"
+  # 论文、笔记和下载区
+  papers_dir: "Papers"
+  notes_dir: "Notes"
+  pdfs_dir: "pdfs"
+
+# 抓取与处理配置
+fetch:
+  # 网络请求参数配置
+  arxiv_api:
+    base_url: "https://export.arxiv.org/api/query"
+    # sort_by 可选：relevance / lastUpdatedDate / submittedDate
+    sort_by: "submittedDate"
+    # sort_order 可选：ascending / descending
+    sort_order: "descending"
+    # start：分页起点，0-based，必须 >= 0
+    start: 0
+    # max_results：每次请求返回数量
+    # - 单次切片（slice）最大 2000
+    # - 单次请求超过 30000 会返回 HTTP 400（官方限制）
+    max_results: 150
+
+    http:
+      timeout_seconds: 30
+      retries: 3
+      backoff_seconds: 2
+      min_delay_seconds: 3
+      user_agent: "MyArxiv-Agent/1.0 (+https://github.com/)"
+
+  # 论文检索参数配置
+  query: 
+    # id_list：可选。精确指定 arXiv id。
+    # - 支持 YAML 列表（推荐）或逗号分隔字符串
+    # - 可包含版本号（vN）
+    # 方式：
+    # - 仅提供 id_list：按 id 精确拉取
+    # - 同时提供 id_list + 由 categories/keywords 构造的 search_query：过滤
+    # 示例：
+    # - ["cond-mat/0207270"] 表示取最新版本
+    # - ["cond-mat/0207270v1"] 表示取指定版本
+    id_list: []
+    # 关注的 arXiv 分区（示例：cs.AI / cs.CL / cs.CR ...）
+    categories:
+      - "cs.AI"
+    # 关键词过滤：指的是匹配标题/摘要内字段。
+    keywords:
+      - "Agent"
+    # keyword_field：arXiv 支持的字段前缀，常用：all / ti / abs / au / co / jr / cat / rn
+    keyword_field: "all"
+    # 组合逻辑：当同时提供 categories 与 keywords 时，如何拼接 search_query。
+    # 其中 cat_or / kw_or 会被替换为各自的 OR 表达式。
+    # Boolean 可选：AND / OR / ANDNOT。
+    combine_mode: "(cat_or) AND (kw_or)"
+
+  # 去重策略配置
+  dedupe:
+    # - link：按链接完全匹配去重；不识别“同一 arXiv id 的版本更新”。
+    #         若链接中包含版本号（.../abs/<id>vN），则新版本通常会被当作“新链接”追加。
+    # - arxiv_id：按 arXiv base id 去重，可识别版本更新
+    strategy: "arxiv_id"
+  
+  # Inbox收件箱配置
+  formatting:
+    # 每篇论文摘要截断长度（字符数）
+    summary_max_chars: 250
+    # 作者显示：若作者数 > threshold，则显示 "第1作者 et al."。
+    author_et_al_threshold: 1
+    # 插入位置：插入到 Inbox 中第一个分隔线 "---" 之后
+    inbox_insert_after_delimiter: "---"
+    # 每日更新提示模板
+    daily_heading_template: "## {date} 更新 {count} 篇新论文"
+    # 每条论文条目格式（Markdown），可用变量：category, title, link, author, published, summary
+    item_template: "- [ ] **[{category}]** [{title}]({link}) *by {author} ({published})* - _{summary}_"
+    # 日期字段来源：可选：published / updated
+    # - published：arXiv <published>（版本 1 的提交/处理日期）
+    # - updated：arXiv <updated>（当前返回版本的提交/处理日期，若为 v1 则等于 published）
+    date_source: "published"  
+    # 版本更新提示模板，可用变量：date, arxiv_id, title, link, old_version, new_version
+    version_update_notice_template: "- [ ] (版本更新) {date}：{arxiv_id} 从 v{old_version} 更新到 v{new_version} - [{title}]({link})"
+
+# 版本更新处理配置（仅在 fetch.dedupe.strategy=arxiv_id 时生效）
+features:
+  # 可选：
+  # - ignore：不处理版本更新（按去重策略跳过）
+  # - append_notice：在 Inbox 追加一条“版本更新”提示
+  # - replace：把 Inbox 中旧版本 abs 链接替换为新版本链接，并追加一条“版本更新”提示
+  arxiv_version_update_behavior: "append_notice"
+
+# 归档配置
+archive:
+  # 复选框符号配置
+  checkbox:
+    checked: "x"
+  # 归档解析配置，默认匹配：- [x] **[Category]** [Title](Link) ...
+  parsing:
+    entry_regex: "-\\s+\\[x\\]\\s+\\*\\*\\[(.*?)\\]\\*\\*\\s+\\[(.*?)\\]\\((.*?)\\).*"
+  # 笔记模板配置
+  notes:
+    template:
+      title_prefix: "# "
+      sections:
+        - "## 1. 摘要"
+        - "## 2. 关键成果"
+        - "## 3. 核心技术"
+        - "## 4. 实验及其结果"
+        - "## 5. 我的观点"
+  # 论文归档模板配置，每个分类在 Papers/<Category>/List.md 里追加的条目模板，变量：title, link, date, notes_rel_path
+  papers:
+    list_entry_template: "- [{title}]({link}) - *{date}* [Notes]({notes_rel_path})"
+  # 目录配置
+  contents:
+    title: "# 🗂️ Contents Index"
+    updated_prefix: "> 上次更新时间为 "
+    updated_time_format: "%Y-%m-%d %H:%M"
+  # 笔记链接配置
+  links:
+    # 在 Papers/List.md 中写入的 Notes 相对链接策略
+    # 当前仓库结构下：Papers/<cat>/List.md 到 Notes/<cat>/<title>.md
+    notes_rel_path_template: "../../Notes/{category}/{title}.md"
+
+# 安全配置
+safety:
+
+  # 外部输入（title/summary/authors）在未来生成 HTML 时需要转义/净化。
+  # 目前脚本仅输出 Markdown，但仍建议保留此配置区方便后续扩展。
+  sanitize_filenames: true
+  strip_control_chars: true
+
+
