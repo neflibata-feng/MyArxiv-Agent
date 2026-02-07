@@ -18,6 +18,90 @@ _ARXIV_ABS_RE = re.compile(r"arxiv\.org/abs/([^\s\)\]]+)", re.IGNORECASE)
 _CONTROL_CHARS_RE = re.compile(r"[\x00-\x1f\x7f]")
 
 
+def _read_text_if_exists(path: str) -> str:
+    try:
+        if path and os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                return f.read() or ""
+    except Exception:
+        return ""
+    return ""
+
+
+def _scan_arxiv_versions_from_text(content: str):
+    """Scan markdown text and return (links_set, versions_by_base_id)."""
+    links = set()
+    versions = {}
+    if not content:
+        return links, versions
+
+    for match in _ARXIV_ABS_RE.finditer(content):
+        raw = match.group(1)
+        base, ver = _parse_arxiv_id_and_version(raw)
+        if base:
+            old = versions.get(base)
+            if ver is None:
+                if old is None:
+                    versions[base] = None
+            else:
+                if old is None or (isinstance(old, int) and ver > old):
+                    versions[base] = ver
+            # store the matched link (best-effort)
+            links.add(f"https://arxiv.org/abs/{raw}")
+
+    # Also capture any http links in markdown parentheses (for link-based dedupe)
+    for m in re.finditer(r"\((https?://[^\)]+)\)", content):
+        links.add(m.group(1))
+
+    return links, versions
+
+
+def _scan_archived_index(config):
+    """Build a dedupe index from already-archived metadata.
+
+    When a paper is archived, it is appended into Papers/*/List.md and mirrored
+    into Contents.md. If we only dedupe against Inbox.md, archived papers can be
+    re-added on the next fetch.
+    """
+
+    contents_rel = get_config_value(config, "paths.contents", "Contents.md")
+    papers_rel = get_config_value(config, "paths.papers_dir", "Papers")
+
+    contents_path = os.path.join(BASE_DIR, contents_rel)
+    papers_dir = os.path.join(BASE_DIR, papers_rel)
+
+    archived_links = set()
+    archived_versions_by_id = {}
+
+    # 1) Scan Contents.md (fast path)
+    content = _read_text_if_exists(contents_path)
+    links, versions = _scan_arxiv_versions_from_text(content)
+    archived_links |= links
+    archived_versions_by_id.update(versions)
+
+    # 2) Scan Papers/**/List.md (fallback / redundancy)
+    try:
+        if os.path.isdir(papers_dir):
+            for root, _dirs, files in os.walk(papers_dir):
+                for fn in files:
+                    if fn.lower() != "list.md":
+                        continue
+                    p = os.path.join(root, fn)
+                    t = _read_text_if_exists(p)
+                    l2, v2 = _scan_arxiv_versions_from_text(t)
+                    archived_links |= l2
+                    for k, v in v2.items():
+                        old = archived_versions_by_id.get(k)
+                        if old is None:
+                            archived_versions_by_id[k] = v
+                        elif isinstance(old, int) and isinstance(v, int) and v > old:
+                            archived_versions_by_id[k] = v
+    except Exception:
+        pass
+
+    return archived_links, archived_versions_by_id
+
+
 def _strip_control_chars(text: str) -> str:
     return _CONTROL_CHARS_RE.sub("", text or "")
 
@@ -302,6 +386,13 @@ def update_inbox(papers):
             for m in re.finditer(r"\((https?://[^\)]+)\)", content):
                 existing_links.add(m.group(1))
 
+    archived_links, archived_versions_by_id = _scan_archived_index(config)
+
+    # Merge: treat archived papers as already-known to avoid re-adding.
+    known_links = set(existing_links) | set(archived_links)
+    known_versions_by_id = dict(archived_versions_by_id)
+    known_versions_by_id.update(existing_versions_by_id)
+
     dedupe_strategy = get_config_value(config, "fetch.dedupe.strategy", "link")
     version_behavior = str(
         get_config_value(config, "features.arxiv_version_update_behavior", "ignore")
@@ -322,14 +413,19 @@ def update_inbox(papers):
             new_version = p.get("arxiv_version")
 
             if not arxiv_id:
-                if p.get("link") and p["link"] not in existing_links:
+                if p.get("link") and p["link"] not in known_links:
                     new_papers.append(p)
                 continue
 
-            old_version = existing_versions_by_id.get(arxiv_id)
+            old_version = known_versions_by_id.get(arxiv_id)
 
-            if arxiv_id not in existing_versions_by_id:
+            if arxiv_id not in known_versions_by_id:
                 new_papers.append(p)
+                continue
+
+            # If a paper is already archived (and not present in Inbox), avoid
+            # re-introducing it via version update notices.
+            if arxiv_id not in existing_versions_by_id and arxiv_id in archived_versions_by_id:
                 continue
 
             if (
@@ -356,7 +452,7 @@ def update_inbox(papers):
                     pass
     else:
         for p in papers:
-            if p.get("link") and p["link"] not in existing_links:
+            if p.get("link") and p["link"] not in known_links:
                 new_papers.append(p)
     
     if not new_papers and not version_update_notices:
