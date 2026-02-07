@@ -130,12 +130,6 @@ archive:
     # 当前仓库结构下：Papers/<cat>/List.md 到 Notes/<cat>/<title>.md
     notes_rel_path_template: "../../Notes/{category}/{title}.md"
 
-# 安全配置
-safety:
 
-  # 外部输入（title/summary/authors）在未来生成 HTML 时需要转义/净化。
-  # 目前脚本仅输出 Markdown，但仍建议保留此配置区方便后续扩展。
-  sanitize_filenames: true
-  strip_control_chars: true
 
 
