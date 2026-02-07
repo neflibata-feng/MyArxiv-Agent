@@ -2,3 +2,4 @@ requests
 feedparser
 bs4
 PyGithub
+PyYAML
