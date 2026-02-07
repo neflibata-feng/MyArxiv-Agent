@@ -9,8 +9,7 @@
 
 ---
 
-## 2026-02-07 更新 1 篇新论文
-- [ ] **[cs.MA]** [Learning to Share: Selective Memory for Efficient Parallel Agentic Systems](https://arxiv.org/abs/2602.05965v1) *by Joseph Fioresi et al. (2026-02-05)* - _Agentic systems solve complex tasks by coordinating multiple agents that iteratively reason, invoke tools, and exchange intermediate results. To improve robustness and solution quality, recent approaches deploy multiple agent teams running in paralle..._
+
 
 
 ## 2026-02-06 更新 51 篇新论文
