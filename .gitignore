@@ -1,2 +1,8 @@
 .idea/
 .venv/
+.vscode/
+node_modules/
+dist/
+dist-ssr/
+*.local
+.npm/
