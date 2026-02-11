@@ -74,7 +74,7 @@ fetch:
   # Inbox收件箱配置
   formatting:
     # 每篇论文摘要截断长度（字符数）
-    summary_max_chars: 250
+    summary_max_chars: 500
     # 作者显示：若作者数 > threshold，则显示 "第1作者 et al."。
     author_et_al_threshold: 1
     # 插入位置：插入到 Inbox 中第一个分隔线 "---" 之后
