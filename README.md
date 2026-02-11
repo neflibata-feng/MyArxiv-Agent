@@ -31,8 +31,10 @@
 /
 ├── .github/             # GitHub Actions 自动化配置
 ├── scripts/             # 自动化脚本
-├── Inbox.md             # 待阅读区 (每日更新入口)
+├── assets/              # 图片等静态资源
+├── Inbox.md             # 收件箱 (每日更新入口)
 ├── Contents.md          # 总目录 (自动生成)
+├── pdfs/                # 论文PDF存储（可选）
 ├── Papers/              # 论文元数据归档  
 ├── Notes/               # 个人笔记与思考
 ├── config.yaml          # 全局配置文件
