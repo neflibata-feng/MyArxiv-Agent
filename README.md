@@ -1,3 +1,19 @@
+<p align="center">
+  <img src="assets/logo.png" alt="MyArxiv-Agent" width="500">
+</p>
+
+<p align="center">
+  <a href="https://github.com/neflibata-feng/MyArxiv-Agent/actions/workflows/daily_scheduler.yml?query=branch%3Amain"><img src="https://img.shields.io/github/actions/workflow/status/neflibata-feng/MyArxiv-Agent/daily_scheduler.yml?branch=main&style=for-the-badge" alt="Daily Scheduler"></a>
+  <a href="https://github.com/neflibata-feng/MyArxiv-Agent/actions/workflows/auto_archive.yml?query=branch%3Amain"><img src="https://img.shields.io/github/actions/workflow/status/neflibata-feng/MyArxiv-Agent/auto_archive.yml?branch=main&style=for-the-badge" alt="Auto Archive"></a>
+  <a href="https://github.com/neflibata-feng/MyArxiv-Agent/actions/workflows/deploy-web.yml?query=branch%3Amain"><img src="https://img.shields.io/github/actions/workflow/status/neflibata-feng/MyArxiv-Agent/deploy-web.yml?branch=main&style=for-the-badge" alt="Deploy Web"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/Content%20License-CC%20BY--NC--SA%204.0-lightgrey?style=for-the-badge" alt="Content License"></a>
+  <a href="LICENSE-APACHE"><img src="https://img.shields.io/badge/Code%20License-Apache--2.0-blue?style=for-the-badge" alt="Code License"></a>
+</p>
+
+<p align="center">
+  <strong>中文</strong> · <a href="README.en.md">English</a>
+</p>
+
 ## 关于本仓库
 
 - 这是一个由**neflibata-feng**个人维护的论文+笔记仓库。
@@ -6,11 +22,20 @@
   
 ---
 
+## 许可说明
+
+- **内容许可**：仓库内的整理内容与文字材料（如 `Notes/`、Markdown 文档、截图等）遵循 **CC BY-NC-SA 4.0**，见 [LICENSE](LICENSE)。
+- **架构与代码许可**：自动化框架与代码（如 `scripts/`、`web/`、`.github/workflows/` 等）采用 **Apache-2.0**，见 [LICENSE-APACHE](LICENSE-APACHE)。
+
+> 注：论文的版权归原作者与出版方所有；本仓库仅做学习研究与工程实践整理。
+
+---
+
 ## **特别声明**：
 
 1. 本仓库不以盈利为目的且充分尊重知识产权，仅提供AI Agent领域**公开论文**的元数据，不大量存储论文原件，只在必要时存储部分论文，如有侵权请联系我删除。
 2. 请在使用本仓库内容时，遵守相关法律法规及学术规范，尊重原作者权益。
-3. 本仓库以满足本人使用为主要目的，因此**不接受任何开源贡献**。
+3. 本仓库以满足本人使用为主要目的，因此**一般不接受其他贡献**。
 4. 但是秉持着开源和共享的精神，依然欢迎大家浏览本人整理的论文和笔记（可以**star**哦）
 5. 同时本仓库依然可以作为个人arXiv自动化论文知识空间的模板，你可以**fork**本仓库并根据自己的需求进行修改和使用。
 
@@ -40,7 +65,8 @@
 ├── config.yaml          # 全局配置文件
 ├── .gitignore           # Git 忽略规则
 ├── web/                 # 网页端源码
-├── LICENSE              # 许可证文件
+├── LICENSE              # 内容许可证文件
+├── LICENSE-APACHE       # 代码许可证文件
 └── README.md            # 仓库介绍
 ```
 ---
@@ -49,9 +75,9 @@
 
 ### 核心流程和使用步骤
 
-1. **Daily Fetch**: 每日固定时间（默认为北京时间8：30）自动抓取特定领域（默认为AI Agent）最新论文至 `Inbox.md`待阅读区。默认最大抓取量为每日最新的150篇论文，且有去重机制，确保不遗漏任何更新。
-2. **Review & Pick**: 在 `Inbox.md` 中，支持将感兴趣的论文标记为对钩。系统会自动将其剪切处理，对于不感兴趣的论文，可以直接删除对应行，系统会忽略这些论文。长期使用请定期清除 `Inbox.md` 中的旧条目以保持整洁。
-3. **Auto Archive**: 提交 `Inbox.md` 的更改后，系统会自动：
+1. **每日抓取**：每日固定时间（默认为北京时间8：30）自动抓取特定领域（默认为AI Agent）最新论文至 `Inbox.md` 待阅读区。默认最大抓取量为每日最新的150篇论文，且有去重机制，确保不遗漏任何更新。
+2. **审阅与筛选**：在 `Inbox.md` 中，支持将感兴趣的论文标记为对钩。系统会自动将其剪切处理，对于不感兴趣的论文，可以直接删除对应行，系统会忽略这些论文。长期使用请定期清除 `Inbox.md` 中的旧条目以保持整洁。
+3. **自动归档**：提交 `Inbox.md` 的更改后，系统会自动：
    - 将选中的论文归档至 `Papers/`。
    - 在 `Notes/` 创建对应的笔记模板。
    - 更新 `Contents.md` 目录索引。
@@ -99,6 +125,6 @@
 
 ## 致谢 
 
-> Thank you to arXiv for use of its open access interoperability.
+> 感谢 arXiv 提供开放获取与操作支持。
 
 
