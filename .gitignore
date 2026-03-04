@@ -6,3 +6,4 @@ dist/
 dist-ssr/
 *.local
 .npm/
+MyArxiv-Agent-token.txt
