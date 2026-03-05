@@ -56,6 +56,7 @@
 /
 ├── .github/             # GitHub Actions 自动化配置
 ├── scripts/             # 自动化脚本
+├── agent/               # 智能体模块（skills，开发中）
 ├── assets/              # 图片等静态资源
 ├── Inbox.md             # 收件箱 (每日更新入口)
 ├── Contents.md          # 总目录 (自动生成)
@@ -103,6 +104,42 @@
 - `ARXIV_AGENT__fetch__arxiv_api__max_results=200`
 - `ARXIV_AGENT__fetch__query__categories=["cs.AI","cs.CL"]`
 
+--- 
+
+## 智能体模块（开发中）
+
+本仓库的 `agent/` 目录用于沉淀可复用的“技能（skill）模块”和智能体工作流。每个 skill 以独立目录存在，一般包含：
+- `SKILL.md`：技能说明（适用场景、工作流、输出规范）
+- `scripts/` / `templates/` / `references/` / `assets/`：可选的脚本、模板与参考资料
+
+> 当前状态：skills 已引入并可独立复用；**尚未**与本仓库的自动化主流程（`scripts/` + GitHub Actions）做强绑定集成。
+
+### Skills 清单
+
+**CorePipeline（写作与文档规范）**
+- `literature-review`：系统化文献综述工作流（规划→检索→综合→引用校验→输出）。
+  - 主要脚本：`scripts/search_databases.py`、`scripts/verify_citations.py`、`scripts/generate_pdf.py`
+  - 产物：结构化 Markdown 综述；可选 PDF
+- `scientific-writing`：科研写作规范与流程（IMRAD 结构；先大纲后成文；强调引用规范与可复现的写作输出）。
+  - 资源：`assets/scientific_report_template.tex`、`assets/scientific_report.sty`、`assets/REPORT_FORMATTING_GUIDE.md`
+- `markdown-mermaid-writing`：Markdown + Mermaid 作为默认文档与制图标准（提供风格指南、24 类图示参考与 9 个常用模板）。
+  - 模板：`templates/` 下包含 research paper / PR / issue / kanban 等模板
+
+**DocumentProcessing（文档处理）**
+- `markitdown`：基于 Microsoft MarkItDown 的“文件→Markdown”转换（PDF/DOCX/PPTX/XLSX/图片 OCR/音频转写/HTML 等）。
+  - 主要脚本：`scripts/batch_convert.py`、`scripts/convert_literature.py`、`scripts/convert_with_ai.py`
+
+**Metadata & Retrieval（元数据与检索）**
+- `research-lookup`：实时研究信息检索（自动路由到不同后端；支持强制选择后端）。
+  - 关键依赖：需要 `PARALLEL_API_KEY` 与 `OPENROUTER_API_KEY`（见该目录 `SKILL.md`）
+  - 入口：`research_lookup.py`（以及 `scripts/research_lookup.py`）
+- `openalex-database`：OpenAlex 学术数据库检索与分析（论文/作者/机构/高被引/开放获取等）。
+  - 主要脚本：`scripts/openalex_client.py`、`scripts/query_helpers.py`
+  - 特点：无需 API Key；建议配置 email 以使用 polite pool（提高速率上限）
+- `citation-management`：引用管理（Google Scholar/PubMed 检索；元数据抽取与校验；生成/格式化 BibTeX）。
+  - 主要脚本：`scripts/search_google_scholar.py`、`scripts/search_pubmed.py`、`scripts/doi_to_bibtex.py`、`scripts/validate_citations.py` 等
+
+---
 
 ### 常见问题
 - **时间相关问题**
