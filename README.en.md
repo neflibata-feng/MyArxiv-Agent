@@ -57,6 +57,7 @@
 /
 ├── .github/             # GitHub Actions workflows
 ├── scripts/             # automation scripts
+├── agent/               # agent module (skills, WIP)
 ├── assets/              # images and static assets
 ├── Inbox.md             # inbox (daily review)
 ├── Contents.md          # index (auto-generated)
@@ -72,6 +73,50 @@
 ```
 
 ---
+
+## Agent Module (WIP)
+
+The `agent/` directory is used to accumulate reusable **skills**. Each skill lives in its own folder and typically contains:
+- `SKILL.md`: what the skill is for (when to use, workflow, output conventions)
+- optional `scripts/` / `templates/` / `references/` / `assets/`
+
+> Current status: skills are already included and can be reused independently; they are **not yet** tightly integrated into the repo’s main automation pipeline (`scripts/` + GitHub Actions).
+
+### Skills List (based on the actual SKILL.md descriptions)
+
+> Note: treat each skill folder’s `SKILL.md` as the source of truth. Some skill docs may mention external capabilities/skills; always defer to what’s actually present in this repo.
+
+**CorePipeline (writing & documentation standards)**
+- `literature-review`: systematic literature review workflow (plan → search → synthesize → verify citations → output).
+  - main scripts: `scripts/search_databases.py`, `scripts/verify_citations.py`, `scripts/generate_pdf.py`
+  - outputs: structured Markdown; optional PDF
+- `scientific-writing`: scientific writing conventions and workflow (IMRAD; outline-first then prose; citation formatting and reproducible outputs).
+  - assets: `assets/scientific_report_template.tex`, `assets/scientific_report.sty`, `assets/REPORT_FORMATTING_GUIDE.md`
+- `markdown-mermaid-writing`: Markdown + Mermaid as the default documentation/diagram standard (style guides, diagram references, and templates).
+  - templates: research paper / PR / issue / kanban and more under `templates/`
+
+**DocumentProcessing (document conversion)**
+- `markitdown`: file-to-Markdown conversion based on Microsoft MarkItDown (PDF/DOCX/PPTX/XLSX/images with OCR/audio transcription/HTML, etc.).
+  - main scripts: `scripts/batch_convert.py`, `scripts/convert_literature.py`, `scripts/convert_with_ai.py`
+- `get-available-resources`: detect compute resources and suggest strategies (CPU/GPU/memory/disk).
+  - main script: `scripts/detect_resources.py`
+  - output: `.claude_resources.json` generated in the working directory
+
+**Metadata & Retrieval**
+- `research-lookup`: real-time research lookup (auto-routes to different backends; supports forcing a backend).
+  - required env vars: `PARALLEL_API_KEY` and `OPENROUTER_API_KEY` (see `SKILL.md`)
+  - entry: `research_lookup.py` (and `scripts/research_lookup.py`)
+- `openalex-database`: OpenAlex-based scholarly search and analysis (works/authors/institutions/highly-cited/open access, etc.).
+  - main scripts: `scripts/openalex_client.py`, `scripts/query_helpers.py`
+  - notes: no API key required; an email is recommended to access the polite pool (higher rate limits)
+- `citation-management`: citation management (Google Scholar/PubMed search; metadata extraction/validation; BibTeX generation/formatting).
+  - main scripts: `scripts/search_google_scholar.py`, `scripts/search_pubmed.py`, `scripts/doi_to_bibtex.py`, `scripts/validate_citations.py`, etc.
+
+### Planned Usage
+
+- **Pipeline integration**: connect retrieval/citation/writing skills into the `Inbox → Papers/Notes → Contents` workflow to improve the “read → archive → write” loop.
+- **Direct reuse**: copy `agent/skills/` into your own project as a capability library; follow each skill’s `SKILL.md` and `scripts/` for dependencies and usage.
+- **Web/Workbench assistance**: optionally expose skill entry points in the web workbench for standardized outputs.
 
 ## Usage
 
