@@ -98,9 +98,6 @@ The `agent/` directory is used to accumulate reusable **skills**. Each skill liv
 **DocumentProcessing (document conversion)**
 - `markitdown`: file-to-Markdown conversion based on Microsoft MarkItDown (PDF/DOCX/PPTX/XLSX/images with OCR/audio transcription/HTML, etc.).
   - main scripts: `scripts/batch_convert.py`, `scripts/convert_literature.py`, `scripts/convert_with_ai.py`
-- `get-available-resources`: detect compute resources and suggest strategies (CPU/GPU/memory/disk).
-  - main script: `scripts/detect_resources.py`
-  - output: `.claude_resources.json` generated in the working directory
 
 **Metadata & Retrieval**
 - `research-lookup`: real-time research lookup (auto-routes to different backends; supports forcing a backend).
@@ -112,11 +109,6 @@ The `agent/` directory is used to accumulate reusable **skills**. Each skill liv
 - `citation-management`: citation management (Google Scholar/PubMed search; metadata extraction/validation; BibTeX generation/formatting).
   - main scripts: `scripts/search_google_scholar.py`, `scripts/search_pubmed.py`, `scripts/doi_to_bibtex.py`, `scripts/validate_citations.py`, etc.
 
-### Planned Usage
-
-- **Pipeline integration**: connect retrieval/citation/writing skills into the `Inbox → Papers/Notes → Contents` workflow to improve the “read → archive → write” loop.
-- **Direct reuse**: copy `agent/skills/` into your own project as a capability library; follow each skill’s `SKILL.md` and `scripts/` for dependencies and usage.
-- **Web/Workbench assistance**: optionally expose skill entry points in the web workbench for standardized outputs.
 
 ## Usage
 
