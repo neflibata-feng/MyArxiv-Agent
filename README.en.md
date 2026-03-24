@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" alt="MyArxiv-Agent" width="500">
+  <img src="assets/ascii-art-text.png" alt="MyArxiv-Agent" width="500">
 </p>
 
 <p align="center">
