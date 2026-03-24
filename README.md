@@ -4,9 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/neflibata-feng/MyArxiv-Agent/actions/workflows/daily_scheduler.yml?query=branch%3Amain"><img src="https://img.shields.io/github/actions/workflow/status/neflibata-feng/MyArxiv-Agent/daily_scheduler.yml?branch=main&style=for-the-badge" alt="Daily Scheduler"></a>
-  <a href="https://github.com/neflibata-feng/MyArxiv-Agent/actions/workflows/auto_archive.yml?query=branch%3Amain"><img src="https://img.shields.io/github/actions/workflow/status/neflibata-feng/MyArxiv-Agent/auto_archive.yml?branch=main&style=for-the-badge" alt="Auto Archive"></a>
-  <a href="https://github.com/neflibata-feng/MyArxiv-Agent/actions/workflows/deploy-web.yml?query=branch%3Amain"><img src="https://img.shields.io/github/actions/workflow/status/neflibata-feng/MyArxiv-Agent/deploy-web.yml?branch=main&style=for-the-badge" alt="Deploy Web"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/Content%20License-CC%20BY--NC--SA%204.0-lightgrey?style=for-the-badge" alt="Content License"></a>
+   <a href="LICENSE"><img src="https://img.shields.io/badge/Content%20License-CC%20BY--NC--SA%204.0-lightgrey?style=for-the-badge" alt="Content License"></a>
   <a href="LICENSE-APACHE"><img src="https://img.shields.io/badge/Code%20License-Apache--2.0-blue?style=for-the-badge" alt="Code License"></a>
 </p>
 
