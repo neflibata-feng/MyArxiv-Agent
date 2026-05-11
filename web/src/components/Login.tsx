@@ -27,8 +27,8 @@ export function Login({
          <Button variant="ghost" size="sm" onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}>
            {lang === 'zh' ? 'EN' : '中'}
          </Button>
-         <Button variant="ghost" size="sm" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-           {theme === 'dark' ? <Sun className="h-4 w-4"/> : <Moon className="h-4 w-4"/>}
+         <Button variant="ghost" size="sm" onClick={() => setTheme(theme === 'dark' ? 'light' : theme === 'light' ? 'system' : 'dark')}>
+           {theme === 'dark' ? <Sun className="h-4 w-4"/> : theme === 'light' ? <Moon className="h-4 w-4"/> : <Sun className="h-4 w-4"/>}
          </Button>
       </div>
       <Card className="w-full max-w-sm shadow-xl border-t-4 border-t-primary">

@@ -341,7 +341,10 @@ export class GithubClient {
     const lines = originalContent.split("\n");
     const newLines: string[] = [];
     
+    // Build multiple lookup indexes for robust matching
     const paperMap = new Map(papers.map(p => [p.id, p]));
+    // Also build a map by originalLine to catch papers whose id changed
+    const paperByRaw = new Map(papers.map(p => [p.raw, p]));
     
     let state = 0;
     const hasDelimiter = lines.some(l => l.trim() === "---");
@@ -361,17 +364,32 @@ export class GithubClient {
         const match = trimLine.match(/^- \[(x| )\] (.*)/);
         if (match) { 
              let paperMatch: Paper | undefined;
+             const rest = match[2];
              
+             // Try 1: match by arXiv ID extracted from the line
              const linkMatch = trimLine.match(/arxiv\.org\/abs\/([^/)\s]+)/);
              if (linkMatch) {
                  const extractedId = linkMatch[1];
+                 // Try exact id match first
                  paperMatch = paperMap.get(extractedId);
-                 if (!paperMatch) {
-                     for (const p of papers) {
-                         if (line.includes(p.id)) {
-                             paperMatch = p;
-                             break;
-                         }
+                 // Try without version suffix (e.g. "2604.21375v2" -> "2604.21375")
+                 if (!paperMatch && extractedId.includes('v')) {
+                     const baseId = extractedId.replace(/v\d+$/, '');
+                     paperMatch = paperMap.get(baseId);
+                 }
+             }
+             
+             // Try 2: match by original raw line
+             if (!paperMatch) {
+                 paperMatch = paperByRaw.get(trimLine);
+             }
+             
+             // Try 3: fallback - check if any paper's originalLine matches
+             if (!paperMatch) {
+                 for (const p of papers) {
+                     if (p.originalLine.trim() === trimLine) {
+                         paperMatch = p;
+                         break;
                      }
                  }
              }
@@ -380,6 +398,9 @@ export class GithubClient {
                  const checkState = paperMatch.selected ? "x" : " ";
                  const newLine = line.replace(/^- \[(x| )\]/, `- [${checkState}]`);
                  newLines.push(newLine);
+             } else {
+                 // Paper not found in current papers list (deleted) — keep the original line unchanged
+                 newLines.push(line);
              }
         } else {
             newLines.push(line);
