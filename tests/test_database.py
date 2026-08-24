@@ -15,6 +15,8 @@ from database import (  # noqa: E402
     import_inbox,
     parse_arxiv_id,
     parse_inbox_markdown,
+    queue_fetched_papers,
+    render_inbox,
     upsert_inbox_item,
     upsert_paper,
 )
@@ -76,6 +78,72 @@ class DatabaseTests(unittest.TestCase):
                     "SELECT status FROM inbox_items WHERE item_key = 'paper:2608.12345'"
                 ).fetchone()[0]
                 self.assertEqual(status, "archived")
+
+    def test_queue_and_render_respects_limit(self):
+        config = {
+            "inbox": {"render": {"max_items": 2, "max_bytes": 10000}},
+            "fetch": {"formatting": {}},
+        }
+        papers = [
+            {
+                "arxiv_id": f"2608.0000{index}",
+                "arxiv_version": 1,
+                "category": "cs.AI",
+                "title": f"Paper {index}",
+                "author": "Author",
+                "summary": "Summary",
+                "link": f"https://arxiv.org/abs/2608.0000{index}v1",
+                "published": "2026-08-24",
+            }
+            for index in range(3)
+        ]
+
+        with tempfile.TemporaryDirectory() as directory:
+            inbox_path = os.path.join(directory, "Inbox.md")
+            with closing(connect_database(os.path.join(directory, "arxiv.db"))) as connection:
+                result = queue_fetched_papers(
+                    connection, papers, "append_notice", "2026-08-24T00:00:00+00:00"
+                )
+                rendered = render_inbox(connection, config, inbox_path)
+                visible = connection.execute(
+                    "SELECT count(*) FROM inbox_items WHERE visible = 1"
+                ).fetchone()[0]
+
+            self.assertEqual(result, {"added": 3, "version_updates": 0})
+            self.assertEqual(rendered, 2)
+            self.assertEqual(visible, 2)
+            with open(inbox_path, "r", encoding="utf-8") as file:
+                content = file.read()
+            self.assertEqual(content.count("- [ ] **[cs.AI]**"), 2)
+
+    def test_queue_creates_one_version_notice(self):
+        original = {
+            "arxiv_id": "2608.12345",
+            "arxiv_version": 1,
+            "title": "Example",
+            "link": "https://arxiv.org/abs/2608.12345v1",
+        }
+        updated = {
+            **original,
+            "arxiv_version": 2,
+            "link": "https://arxiv.org/abs/2608.12345v2",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            with closing(connect_database(os.path.join(directory, "arxiv.db"))) as connection:
+                queue_fetched_papers(connection, [original], "append_notice", "2026-08-23")
+                first = queue_fetched_papers(
+                    connection, [updated], "append_notice", "2026-08-24"
+                )
+                second = queue_fetched_papers(
+                    connection, [updated], "append_notice", "2026-08-24"
+                )
+                notices = connection.execute(
+                    "SELECT count(*) FROM inbox_items WHERE kind = 'version_update'"
+                ).fetchone()[0]
+
+            self.assertEqual(first["version_updates"], 1)
+            self.assertEqual(second["version_updates"], 0)
+            self.assertEqual(notices, 1)
 
 
 if __name__ == "__main__":

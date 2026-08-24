@@ -10,6 +10,7 @@ from database import (
     import_archives,
     import_inbox,
     integrity_check,
+    render_inbox,
 )
 
 
@@ -32,9 +33,13 @@ def migrate() -> None:
         if os.path.exists(inbox_path):
             with open(inbox_path, "r", encoding="utf-8") as file:
                 inbox = import_inbox(connection, file.read())
+        rendered = render_inbox(connection, config, inbox_path)
         integrity_check(connection)
 
-    print(f"SQLite 迁移完成：归档 {archived} 条，收件箱 {inbox} 条，数据库 {db_path}")
+    print(
+        f"SQLite 迁移完成：归档 {archived} 条，导入 {inbox} 条，"
+        f"Inbox 渲染 {rendered} 条，数据库 {db_path}"
+    )
 
 
 if __name__ == "__main__":

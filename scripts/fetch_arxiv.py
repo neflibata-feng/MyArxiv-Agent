@@ -10,6 +10,13 @@ import requests
 from typing import Optional, Any, Dict, List
 
 from config_loader import load_config, get_config_value
+from database import (
+    connect_database,
+    database_path,
+    integrity_check,
+    queue_fetched_papers,
+    render_inbox,
+)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -366,7 +373,7 @@ def fetch_papers():
             
     return papers
 
-def update_inbox(papers):
+def _update_inbox_markdown_legacy(papers):
     config = load_config(BASE_DIR)
 
     if not papers:
@@ -525,6 +532,30 @@ def update_inbox(papers):
         f.writelines(final_lines)
     
     print(f"成功添加 {len(new_papers)} 篇论文、{len(version_update_notices)} 条版本提示 至 {file_path}")
+
+
+def update_inbox(papers):
+    config = load_config(BASE_DIR)
+    if not papers:
+        print("没有论文更新")
+        return
+
+    inbox_path = os.path.join(
+        BASE_DIR, str(get_config_value(config, "paths.inbox", "Inbox.md"))
+    )
+    version_behavior = str(
+        get_config_value(config, "features.arxiv_version_update_behavior", "ignore")
+    ).strip().lower()
+
+    with connect_database(database_path(config, BASE_DIR)) as connection:
+        result = queue_fetched_papers(connection, papers, version_behavior)
+        rendered = render_inbox(connection, config, inbox_path)
+        integrity_check(connection)
+
+    print(
+        f"成功入库 {result['added']} 篇论文、{result['version_updates']} 条版本提示；"
+        f"Inbox 渲染 {rendered} 条"
+    )
 
 if __name__ == "__main__":
     papers = fetch_papers()
