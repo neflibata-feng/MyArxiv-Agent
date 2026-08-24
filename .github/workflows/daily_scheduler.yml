@@ -9,15 +9,22 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: arxiv-database-writer
+  queue: max
+
 jobs:
   fetch-papers:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
           cache: 'pip'
@@ -33,8 +40,13 @@ jobs:
 
       - name: Commit and Push changes
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add Inbox.md
-          git commit -m "🤖 自动更新论文 $(date +'%Y-%m-%d')" || exit 0
-          git push
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Inbox.md data/arxiv.db
+          if git diff --cached --quiet; then
+            echo "没有需要提交的更新"
+            exit 0
+          fi
+          git commit -m "🤖 自动更新论文 $(date +'%Y-%m-%d')"
+          git pull --rebase origin main
+          git push origin HEAD:main
