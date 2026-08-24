@@ -93,7 +93,10 @@ export function ArchiveView({ client, t, searchTerm, config }: ArchiveViewProps)
                            )}
 
                            {isMarkdown(activeFile.path) && (
-                              <MarkdownViewer content={loading ? t.loading : content || t.emptyFile} />
+                              <MarkdownViewer
+                                content={loading ? t.loading : content || t.emptyFile}
+                                resolveAssetUrl={(url) => client.resolveRawUrl(url, activeFile.path)}
+                              />
                            )}
                         </CardContent>
                      </Card>

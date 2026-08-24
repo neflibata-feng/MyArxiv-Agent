@@ -53,6 +53,26 @@ export class GithubClient {
     this.cache.clear();
   }
 
+  resolveRawUrl(url: string, sourcePath: string = ""): string {
+    const value = url.trim();
+    if (!value || /^(?:[a-z][a-z\d+.-]*:|#|\/\/)/i.test(value)) {
+      return value;
+    }
+
+    const sourceDir = sourcePath.includes('/')
+      ? sourcePath.split('/').slice(0, -1)
+      : [];
+    const parts = value.startsWith('/') ? [] : [...sourceDir];
+    for (const part of value.replace(/^\.\//, '').split('/')) {
+      if (!part || part === '.') continue;
+      if (part === '..') parts.pop();
+      else parts.push(part);
+    }
+    const encodedPath = parts.map(encodeURIComponent).join('/');
+    const encodedBranch = this.branch.split('/').map(encodeURIComponent).join('/');
+    return `https://raw.githubusercontent.com/${encodeURIComponent(this.owner)}/${encodeURIComponent(this.repo)}/${encodedBranch}/${encodedPath}`;
+  }
+
   private getFromCache<T>(key: string): T | null {
     const item = this.cache.get(key);
     if (item && Date.now() - item.timestamp < this.cacheTTL) {

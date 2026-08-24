@@ -96,7 +96,10 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
                    
                    {/* Preview Pane */}
                    <div className={cn("flex-1 h-full overflow-y-auto p-8 bg-card", viewMode === 'single' && isEditing ? "hidden" : "block")}>
-                       <MarkdownViewer content={content || "*Empty file*"} />
+                       <MarkdownViewer
+                         content={content || "*Empty file*"}
+                         resolveAssetUrl={(url) => client.resolveRawUrl(url, activeFile.path)}
+                       />
                    </div>
                </div>
              </>

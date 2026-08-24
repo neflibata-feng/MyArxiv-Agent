@@ -30,7 +30,12 @@ const sanitizeSchema: any = {
   },
 }
 
-export function MarkdownViewer({ content }: { content: string }) {
+interface MarkdownViewerProps {
+  content: string
+  resolveAssetUrl?: (url: string) => string
+}
+
+export function MarkdownViewer({ content, resolveAssetUrl }: MarkdownViewerProps) {
   return (
     <div className={[
       'prose dark:prose-invert max-w-none',
@@ -56,6 +61,9 @@ export function MarkdownViewer({ content }: { content: string }) {
            rehypeHighlight,
          ]}
          components={{
+           img: ({ src, ...props }) => (
+             <img src={src && resolveAssetUrl ? resolveAssetUrl(src) : src} {...props} />
+           ),
            table: ({ children, ...props }) => (
              <div className="overflow-x-auto">
                <table className="w-full" {...props}>
