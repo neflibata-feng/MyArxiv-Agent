@@ -524,10 +524,74 @@ def render_inbox(
             os.unlink(temporary_path)
         raise
 
-    with connection:
-        connection.execute("UPDATE inbox_items SET visible = 0")
-        connection.executemany(
-            "UPDATE inbox_items SET visible = 1 WHERE item_key = ?",
-            [(row["item_key"],) for row in rows],
-        )
+    target_keys = {row["item_key"] for row in rows}
+    visible_keys = {
+        row[0] for row in connection.execute("SELECT item_key FROM inbox_items WHERE visible = 1")
+    }
+    if target_keys != visible_keys:
+        with connection:
+            connection.execute("UPDATE inbox_items SET visible = 0 WHERE visible = 1")
+            connection.executemany(
+                "UPDATE inbox_items SET visible = 1 WHERE item_key = ?",
+                [(key,) for key in target_keys],
+            )
     return len(rows)
+
+
+def inbox_changes(
+    connection: sqlite3.Connection, content: str
+) -> Dict[str, List[Any]]:
+    parsed = parse_inbox_markdown(content)
+    checkbox_lines = sum(
+        1 for line in content.splitlines() if re.match(r"^- \[[xX ]\]\s+", line.strip())
+    )
+    if checkbox_lines != len(parsed):
+        raise ValueError("Inbox 中存在无法识别的论文条目，已停止同步")
+
+    current = {item["item_key"]: item for item in parsed}
+    visible = connection.execute(
+        """
+        SELECT
+            i.item_key, i.kind, p.arxiv_id, p.category, p.title, p.link,
+            p.published_at
+        FROM inbox_items AS i
+        JOIN papers AS p ON p.arxiv_id = i.arxiv_id
+        WHERE i.visible = 1 AND i.status = 'pending'
+        """
+    ).fetchall()
+
+    archived: List[sqlite3.Row] = []
+    dismissed: List[str] = []
+    for row in visible:
+        item = current.get(row["item_key"])
+        if item is None:
+            dismissed.append(row["item_key"])
+        elif item["checked"]:
+            archived.append(row)
+    return {"archived": archived, "dismissed": dismissed}
+
+
+def apply_inbox_changes(
+    connection: sqlite3.Connection,
+    archived_keys: Iterable[str],
+    dismissed_keys: Iterable[str],
+    processed_at: Optional[str] = None,
+) -> None:
+    processed = processed_at or utc_now()
+    with connection:
+        connection.executemany(
+            """
+            UPDATE inbox_items
+            SET status = 'archived', processed_at = ?, visible = 0
+            WHERE item_key = ? AND status = 'pending'
+            """,
+            [(processed, key) for key in archived_keys],
+        )
+        connection.executemany(
+            """
+            UPDATE inbox_items
+            SET status = 'dismissed', processed_at = ?, visible = 0
+            WHERE item_key = ? AND status = 'pending'
+            """,
+            [(processed, key) for key in dismissed_keys],
+        )
