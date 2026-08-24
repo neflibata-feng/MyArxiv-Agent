@@ -14,9 +14,20 @@
 
 ## About
 
-- This is a personal papers-and-notes repository maintained by **neflibata-feng**.
-- It focuses on organizing and sharing AI Agent research since 2026.
-- Paper metadata comes from **arXiv**. Notes are **original** and for research/engineering reference.
+- This is a personal arXiv knowledge workspace maintained and used by **neflibata-feng** to organize AI Agent papers, review daily updates, and write research notes.
+- Paper metadata comes from **arXiv**. `Inbox.md` is the daily review view, `Papers/` stores archived metadata, and `Notes/` contains personal notes and ideas.
+- The repository can also be used as a complete template: **fork** it, clear the example data, and adjust the configuration to create your own automated arXiv papers-and-notes workspace.
+
+### Migrate a fork for personal use
+
+1. **Clear existing data**: Delete `data/arxiv.db`; clear the contents of `Papers/`, `Notes/`, and optionally `pdfs/`; leave `Inbox.md` with only the `---` delimiter and reset `Contents.md`. Keep the directories, scripts, and workflow files.
+2. **Update configuration**: Change `meta.owner`, categories, keywords, daily fetch count, and Inbox capacity in `config.yaml`.
+3. **Rebuild the database**: Install `scripts/requirements.txt`, then run `python scripts/migrate_to_sqlite.py` to create your empty SQLite database and Inbox view. Commit the initialized files.
+4. **Enable automation**: Enable workflows from the fork's Actions page. Under `Settings → Actions → General`, confirm that `GITHUB_TOKEN` can read and write repository contents. Manually run `Daily Arxiv Fetcher` once to verify the configuration.
+5. **Configure the web PAT**: Create a fine-grained PAT limited to the fork, grant only `Contents: Read and write`, and choose a reasonable expiry. Enter `your-user/repository` and the PAT on the web login page. Never place the PAT in the repository, `config.yaml`, or a commit. The current web UI stores it locally in the browser, so use it only on a trusted device.
+6. **Enable the web UI**: Manually run `Deploy Web App` to create the `gh-pages` branch, then configure `Settings → Pages` to publish from the root of that branch.
+
+> After migration, SQLite is the complete data source and `Inbox.md` is only a fixed-size editable view. Do not clear history by deleting Inbox alone.
 
 ---
 
