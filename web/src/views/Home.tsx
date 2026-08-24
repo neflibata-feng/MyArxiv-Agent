@@ -20,7 +20,10 @@ export function HomeView({ client, config }: HomeViewProps) {
   return (
     <div className="h-full overflow-y-auto p-6 md:p-10">
        <div className="max-w-4xl mx-auto bg-card rounded-xl p-8 shadow-sm border">
-          <MarkdownViewer content={content} />
+          <MarkdownViewer
+            content={content}
+            resolveAssetUrl={(url) => client.resolveRawUrl(url, homePath)}
+          />
        </div>
     </div>
   )
