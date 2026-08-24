@@ -398,9 +398,6 @@ export class GithubClient {
                  const checkState = paperMatch.selected ? "x" : " ";
                  const newLine = line.replace(/^- \[(x| )\]/, `- [${checkState}]`);
                  newLines.push(newLine);
-             } else {
-                 // Paper not found in current papers list (deleted) — keep the original line unchanged
-                 newLines.push(line);
              }
         } else {
             newLines.push(line);

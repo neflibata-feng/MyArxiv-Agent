@@ -11,7 +11,9 @@ if SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, SCRIPTS_DIR)
 
 from database import (  # noqa: E402
+    apply_inbox_changes,
     connect_database,
+    inbox_changes,
     import_inbox,
     parse_arxiv_id,
     parse_inbox_markdown,
@@ -144,6 +146,45 @@ class DatabaseTests(unittest.TestCase):
             self.assertEqual(first["version_updates"], 1)
             self.assertEqual(second["version_updates"], 0)
             self.assertEqual(notices, 1)
+
+    def test_inbox_changes_detects_archived_and_dismissed_items(self):
+        config = {
+            "inbox": {"render": {"max_items": 2, "max_bytes": 10000}},
+            "fetch": {"formatting": {}},
+        }
+        papers = [
+            {
+                "arxiv_id": f"2608.1000{index}",
+                "arxiv_version": 1,
+                "category": "cs.AI",
+                "title": f"Paper {index}",
+                "author": "Author",
+                "summary": "Summary",
+                "link": f"https://arxiv.org/abs/2608.1000{index}v1",
+                "published": "2026-08-24",
+            }
+            for index in range(2)
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            inbox_path = os.path.join(directory, "Inbox.md")
+            with closing(connect_database(os.path.join(directory, "arxiv.db"))) as connection:
+                queue_fetched_papers(connection, papers, seen_at="2026-08-24")
+                render_inbox(connection, config, inbox_path)
+                with open(inbox_path, "r", encoding="utf-8") as file:
+                    lines = file.readlines()
+                entries = [index for index, line in enumerate(lines) if line.startswith("- [ ]")]
+                lines[entries[0]] = lines[entries[0]].replace("- [ ]", "- [x]", 1)
+                del lines[entries[1]]
+                changes = inbox_changes(connection, "".join(lines))
+                archived_keys = [row["item_key"] for row in changes["archived"]]
+                apply_inbox_changes(connection, archived_keys, changes["dismissed"])
+                statuses = dict(
+                    connection.execute("SELECT item_key, status FROM inbox_items").fetchall()
+                )
+
+            self.assertEqual(len(archived_keys), 1)
+            self.assertEqual(len(changes["dismissed"]), 1)
+            self.assertEqual(set(statuses.values()), {"archived", "dismissed"})
 
 
 if __name__ == "__main__":
