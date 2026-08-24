@@ -4,10 +4,16 @@ on:
   schedule:
     # 每天 UTC 0:30 (北京时间 8:30) 运行
     - cron: '30 0 * * *'
-  workflow_dispatch: # 允许手动触发
+  workflow_dispatch:
+    inputs:
+      rate_limit_retry:
+        description: '429 限流后的自动重试标记'
+        required: false
+        default: '0'
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: arxiv-database-writer
@@ -35,10 +41,34 @@ jobs:
           pip install -r scripts/requirements.txt
 
       - name: Fetch and Update Inbox
+        id: fetch
         run: |
+          set +e
           python scripts/fetch_arxiv.py
+          exit_code=$?
+          set -e
+          if [ "$exit_code" -eq 75 ]; then
+            echo "rate_limited=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          exit "$exit_code"
+
+      - name: Retry workflow after rate limit
+        if: steps.fetch.outputs.rate_limited == 'true' && github.event.inputs.rate_limit_retry != '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "连续 3 次收到 HTTP 429，等待 5 分钟后重新启动工作流"
+          sleep 300
+          gh workflow run daily_scheduler.yml --ref main -f rate_limit_retry=1
+
+      - name: Stop after repeated rate limit
+        if: steps.fetch.outputs.rate_limited == 'true' && github.event.inputs.rate_limit_retry == '1'
+        run: |
+          echo "自动重启后仍连续 3 次收到 HTTP 429，本次停止"
 
       - name: Commit and Push changes
+        if: steps.fetch.outputs.rate_limited != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

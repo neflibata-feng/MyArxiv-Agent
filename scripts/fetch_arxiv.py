@@ -25,6 +25,10 @@ _ARXIV_ABS_RE = re.compile(r"arxiv\.org/abs/([^\s\)\]]+)", re.IGNORECASE)
 _CONTROL_CHARS_RE = re.compile(r"[\x00-\x1f\x7f]")
 
 
+class ArxivRateLimitError(RuntimeError):
+    pass
+
+
 def _read_text_if_exists(path: str) -> str:
     try:
         if path and os.path.exists(path):
@@ -275,6 +279,7 @@ def fetch_papers():
 
     last_error: Optional[Exception] = None
     last_request_ts: Optional[float] = None
+    consecutive_rate_limits = 0
     for attempt in range(int(retries) + 1):
         try:
             if last_request_ts is not None:
@@ -299,6 +304,13 @@ def fetch_papers():
             break
         except Exception as e:
             last_error = e
+            status_code = getattr(getattr(e, "response", None), "status_code", None)
+            if status_code == 429:
+                consecutive_rate_limits += 1
+                if consecutive_rate_limits >= 3:
+                    raise ArxivRateLimitError("arXiv API 连续 3 次返回 HTTP 429") from e
+            else:
+                consecutive_rate_limits = 0
             if attempt >= int(retries):
                 break
             sleep_seconds = float(backoff_seconds) * (2**attempt)
@@ -558,5 +570,9 @@ def update_inbox(papers):
     )
 
 if __name__ == "__main__":
-    papers = fetch_papers()
-    update_inbox(papers)
+    try:
+        papers = fetch_papers()
+        update_inbox(papers)
+    except ArxivRateLimitError as error:
+        print(error)
+        raise SystemExit(75)
