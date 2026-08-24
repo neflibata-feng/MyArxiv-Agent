@@ -16,6 +16,18 @@ paths:
   notes_dir: "Notes"
   pdfs_dir: "pdfs"
 
+# SQLite 数据存储
+storage:
+  sqlite:
+    path: "data/arxiv.db"
+
+# Inbox 只渲染固定数量的待处理论文
+inbox:
+  render:
+    max_items: 200
+    max_bytes: 900000
+    refill_after_archive: true
+
 # 抓取与处理配置
 fetch:
   # 网络请求参数配置
