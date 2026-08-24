@@ -55,9 +55,10 @@
 /
 ├── .github/             # GitHub Actions workflows
 ├── scripts/             # automation scripts
+├── data/                # SQLite paper database
 ├── agent/               # agent module (skills, WIP)
 ├── assets/              # images and static assets
-├── Inbox.md             # inbox (daily review)
+├── Inbox.md             # fixed-size inbox (daily review)
 ├── Contents.md          # index (auto-generated)
 ├── pdfs/                # paper PDFs (optional)
 ├── Papers/              # paper metadata archive
@@ -112,8 +113,8 @@ The `agent/` directory is used to accumulate reusable **skills**. Each skill liv
 
 ### Core Workflow
 
-1. **Daily Fetch**: Automatically fetches the latest papers for selected fields (default: AI Agent) into `Inbox.md` at a fixed time (default: 08:30 Beijing time). Default cap is 150/day with deduplication.
-2. **Review & Pick**: In `Inbox.md`, mark papers you like with a check. The system will pick them up automatically. Delete lines you don't want; they will be ignored. Periodically clean up old entries to keep it tidy.
+1. **Daily Fetch**: Automatically fetches the latest papers for selected fields (default: AI Agent) into SQLite at a fixed time (default: 08:30 Beijing time). The default fetch cap is 150 papers per day, deduplicated by arXiv ID.
+2. **Review & Pick**: `Inbox.md` renders at most 200 pending items by default. Check papers to archive them, or delete unwanted lines to persist a dismissed state in SQLite; the next pending items are then added automatically.
 3. **Auto Archive**: After you commit changes to `Inbox.md`, the system will:
    - Archive selected papers into `Papers/`.
    - Create note templates under `Notes/`.
@@ -121,15 +122,17 @@ The `agent/` directory is used to accumulate reusable **skills**. Each skill liv
 
 ### Global Configuration
 
-The repo root provides `config.yaml` to centrally manage fetching, deduplication, formatting, archiving, and indexing.
+The repo root provides `config.yaml` to centrally manage fetching, SQLite storage, formatting, archiving, and indexing.
 
-- Common options: categories/keywords, fetch count, abstract truncation length, Inbox/Contents templates, archive layout, etc.
+- Common options: categories/keywords, fetch count, SQLite path, Inbox item/byte limits, abstract truncation length, Inbox/Contents templates, archive layout, etc.
 - GitHub Actions uses this file by default; no extra changes needed.
+
+> `storage.sqlite.path` sets the database path. `inbox.render.max_items` and `inbox.render.max_bytes` limit the rendered `Inbox.md`; the database retains complete state while Inbox remains an editable view.
 
 > **arXiv API notes**
 > - `fetch.query.id_list`: Optional. Specify arXiv IDs (supports `vN`); YAML list or comma-separated string. With only `id_list`, fetches by exact IDs; with other query terms, follows arXiv semantics (intersection/filtering).
 > - `fetch.formatting.date_source`: `published`/`updated`, mapping to Atom `<published>` (v1) and `<updated>` (latest).
-> - `features.arxiv_version_update_behavior`: `append_notice` adds a “version update” note; `replace` updates old `abs` links to the new version and also appends the note.
+> - `features.arxiv_version_update_behavior`: `ignore` suppresses version notices; `append_notice`/`replace` update stored version metadata and enqueue a version notice.
 
 ### Environment Variable Overrides
 
@@ -142,6 +145,7 @@ Examples:
 
 - `ARXIV_AGENT__fetch__arxiv_api__max_results=200`
 - `ARXIV_AGENT__fetch__query__categories=["cs.AI","cs.CL"]`
+- `ARXIV_AGENT__inbox__render__max_items=300`
 
 ### FAQ
 
@@ -154,6 +158,8 @@ Examples:
     - To mitigate this, workflows use caching by default; check whether dependency cache is hit.
     - You can also use third-party schedulers (e.g., cron-job.org) to trigger GitHub Actions.
     - If it still fails, try triggering the workflow manually.
+  - **arXiv API returns 429?**
+    - After three consecutive HTTP 429 responses, the workflow waits five minutes and restarts once. If the restarted run is rate-limited three more times, it stops and keeps the logs.
 
 - **Web UI**
   - **Cannot load content**

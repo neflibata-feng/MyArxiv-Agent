@@ -54,9 +54,10 @@
 /
 ├── .github/             # GitHub Actions 自动化配置
 ├── scripts/             # 自动化脚本
+├── data/                # SQLite 论文数据库
 ├── agent/               # 智能体模块（skills，开发中）
 ├── assets/              # 图片等静态资源
-├── Inbox.md             # 收件箱 (每日更新入口)
+├── Inbox.md             # 固定容量收件箱 (每日更新入口)
 ├── Contents.md          # 总目录 (自动生成)
 ├── pdfs/                # 论文PDF存储（可选）
 ├── Papers/              # 论文元数据归档  
@@ -74,8 +75,8 @@
 
 ### 核心流程和使用步骤
 
-1. **每日抓取**：每日固定时间（默认为北京时间8：30）自动抓取特定领域（默认为AI Agent）最新论文至 `Inbox.md` 待阅读区。默认最大抓取量为每日最新的150篇论文，且有去重机制，确保不遗漏任何更新。
-2. **审阅与筛选**：在 `Inbox.md` 中，支持将感兴趣的论文标记为对钩。系统会自动将其剪切处理，对于不感兴趣的论文，可以直接删除对应行，系统会忽略这些论文。长期使用请定期清除 `Inbox.md` 中的旧条目以保持整洁。
+1. **每日抓取**：每日固定时间（默认为北京时间8：30）自动抓取特定领域（默认为AI Agent）的最新论文并写入 SQLite。默认最大抓取量为每日最新的150篇论文，且按 arXiv ID 去重。
+2. **审阅与筛选**：`Inbox.md` 默认只渲染最新的200条待处理数据。将感兴趣的论文标记为对钩后，系统会自动归档；删除不感兴趣的论文后，SQLite 会记录忽略状态并自动补充下一批待处理数据。
 3. **自动归档**：提交 `Inbox.md` 的更改后，系统会自动：
    - 将选中的论文归档至 `Papers/`。
    - 在 `Notes/` 创建对应的笔记模板。
@@ -84,14 +85,16 @@
 
 ### 全局配置
 
-仓库根目录提供 `config.yaml` 用于集中管理抓取、去重、格式化、归档与索引等参数。
-- 常见可配置项：关注分类与关键词、抓取数量、摘要截断长度、Inbox/Contents 生成模板、归档目录结构等。
+仓库根目录提供 `config.yaml` 用于集中管理抓取、SQLite 存储、格式化、归档与索引等参数。
+- 常见可配置项：关注分类与关键词、抓取数量、SQLite 路径、Inbox 最大条目数与字节数、摘要截断长度、Inbox/Contents 生成模板、归档目录结构等。
 - GitHub Actions 默认会直接使用该文件，无需额外改动。
+
+> `storage.sqlite.path` 用于设置数据库路径；`inbox.render.max_items` 与 `inbox.render.max_bytes` 用于限制 `Inbox.md` 的渲染容量。数据库保存完整状态，Inbox 仅作为可编辑视图。
 
 > **arXiv API 参数补充说明**
 > - `fetch.query.id_list`：可选。指定 arXiv id（支持 `vN` 版本号）；支持 YAML 列表或逗号分隔字符串。仅提供 `id_list` 时按 id 精确拉取；若同时提供查询条件，则按官方语义取交集（过滤）。
 > - `fetch.formatting.date_source`：可选 `published`/`updated`；分别对应 Atom 的 `<published>`（v1）与 `<updated>`（当前版本）。
-> - `features.arxiv_version_update_behavior`：`append_notice` 追加“版本更新提示”；`replace` 会把 Inbox 中旧版本 `abs` 链接替换为新版本链接，并同样追加提示。
+> - `features.arxiv_version_update_behavior`：`ignore` 忽略版本提示；`append_notice`/`replace` 会更新数据库中的版本元数据并生成“版本更新提示”。
 
 ### 提供环境变量覆盖供选择
 
@@ -101,6 +104,7 @@
 示例：
 - `ARXIV_AGENT__fetch__arxiv_api__max_results=200`
 - `ARXIV_AGENT__fetch__query__categories=["cs.AI","cs.CL"]`
+- `ARXIV_AGENT__inbox__render__max_items=300`
 
 --- 
 
@@ -149,6 +153,8 @@
     - 为了解决此问题，目前工作流默认设置Cache缓存以便快速运行，请检查依赖项是否缓存成功。
     - 同时建议在cron-job.org等第三方服务中设置定时触发GitHub Actions。
     - 如果问题依然存在，请尝试手动触发工作流运行。
+  - **arXiv API 返回 429？**
+    - 连续3次收到 HTTP 429 时，工作流会等待5分钟并自动重新启动一次；若重启后仍连续限流，本次任务会停止并保留日志。
 - **网页版相关问题**
   - **无法加载内容**
     - 网页版MyArxiv-Agent依赖于GitHub pages提供托管服务,依赖于GitHub PAT令牌鉴权。
