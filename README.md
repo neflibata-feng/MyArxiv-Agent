@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/ascii-art-text.png" alt="MyArxiv-Agent" width="500">
+  <img src="https://raw.githubusercontent.com/neflibata-feng/MyArxiv-Agent/main/assets/ascii-art-text.png" alt="MyArxiv-Agent" width="500">
 </p>
 
 <p align="center">
@@ -51,11 +51,11 @@
 ---
 ## 页面展示
 
-- ![](assets/5.png)
-- ![](assets/4.png)
-- ![](assets/3.png)
-- ![](assets/2.png)
-- ![](assets/1.png)
+- ![](https://raw.githubusercontent.com/neflibata-feng/MyArxiv-Agent/main/assets/5.png)
+- ![](https://raw.githubusercontent.com/neflibata-feng/MyArxiv-Agent/main/assets/4.png)
+- ![](https://raw.githubusercontent.com/neflibata-feng/MyArxiv-Agent/main/assets/3.png)
+- ![](https://raw.githubusercontent.com/neflibata-feng/MyArxiv-Agent/main/assets/2.png)
+- ![](https://raw.githubusercontent.com/neflibata-feng/MyArxiv-Agent/main/assets/1.png)
 
 ---
 
