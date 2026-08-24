@@ -1,0 +1,82 @@
+import os
+import sys
+import tempfile
+import unittest
+from contextlib import closing
+
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SCRIPTS_DIR = os.path.join(ROOT_DIR, "scripts")
+if SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, SCRIPTS_DIR)
+
+from database import (  # noqa: E402
+    connect_database,
+    import_inbox,
+    parse_arxiv_id,
+    parse_inbox_markdown,
+    upsert_inbox_item,
+    upsert_paper,
+)
+
+
+class DatabaseTests(unittest.TestCase):
+    def test_parse_arxiv_id_removes_version(self):
+        self.assertEqual(parse_arxiv_id("https://arxiv.org/abs/2608.12345v3"), ("2608.12345", 3))
+        self.assertEqual(parse_arxiv_id("cond-mat/0207270v1"), ("cond-mat/0207270", 1))
+
+    def test_import_inbox_preserves_paper_and_version_notice(self):
+        markdown = """---
+
+## 2026-08-24 更新 2 篇新论文
+- [ ] **[cs.AI]** [Example](https://arxiv.org/abs/2608.12345v1) *by Alice et al. (2026-08-23)* - _Summary_
+- [ ] (版本更新) 2026-08-24：2608.99999 从 v1 更新到 v2 - [Update](https://arxiv.org/abs/2608.99999v2)
+"""
+        items = parse_inbox_markdown(markdown)
+        self.assertEqual([item["kind"] for item in items], ["paper", "version_update"])
+
+        with tempfile.TemporaryDirectory() as directory:
+            with closing(connect_database(os.path.join(directory, "arxiv.db"))) as connection:
+                self.assertEqual(import_inbox(connection, markdown), 2)
+                rows = connection.execute(
+                    "SELECT item_key, visible FROM inbox_items ORDER BY item_key"
+                ).fetchall()
+                self.assertEqual(len(rows), 2)
+                self.assertTrue(all(row["visible"] == 1 for row in rows))
+
+    def test_archived_item_is_not_reopened(self):
+        with tempfile.TemporaryDirectory() as directory:
+            with closing(connect_database(os.path.join(directory, "arxiv.db"))) as connection:
+                arxiv_id = upsert_paper(
+                    connection,
+                    {
+                        "arxiv_id": "2608.12345",
+                        "title": "Example",
+                        "link": "https://arxiv.org/abs/2608.12345v1",
+                    },
+                    "2026-08-24",
+                )
+                upsert_inbox_item(
+                    connection,
+                    "paper:2608.12345",
+                    arxiv_id,
+                    "paper",
+                    "2026-08-24",
+                    status="archived",
+                )
+                upsert_inbox_item(
+                    connection,
+                    "paper:2608.12345",
+                    arxiv_id,
+                    "paper",
+                    "2026-08-25",
+                    status="pending",
+                )
+                status = connection.execute(
+                    "SELECT status FROM inbox_items WHERE item_key = 'paper:2608.12345'"
+                ).fetchone()[0]
+                self.assertEqual(status, "archived")
+
+
+if __name__ == "__main__":
+    unittest.main()

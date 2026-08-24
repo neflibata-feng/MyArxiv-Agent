@@ -7,3 +7,6 @@ dist-ssr/
 *.local
 .npm/
 MyArxiv-Agent-token.txt
+__pycache__/
+*.py[cod]
+*.tsbuildinfo
