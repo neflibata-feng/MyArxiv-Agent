@@ -1,5 +1,15 @@
 import { Octokit } from "octokit";
 
+function encodeBase64(content: string): string {
+  const bytes = new TextEncoder().encode(content);
+  const chunks: string[] = [];
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    chunks.push(String.fromCharCode(...bytes.subarray(offset, offset + chunkSize)));
+  }
+  return btoa(chunks.join(""));
+}
+
 export interface Paper {
   id: string;
   title: string;
@@ -146,9 +156,7 @@ export class GithubClient {
   }
 
   async updateFile(path: string, content: string, sha: string, message: string) {
-    const contentBase64 = btoa(
-      String.fromCharCode(...new TextEncoder().encode(content))
-    );
+    const contentBase64 = encodeBase64(content);
 
     await this.octokit.rest.repos.createOrUpdateFileContents({
       owner: this.owner,
