@@ -5,6 +5,7 @@ import json
 import os
 import re
 import sqlite3
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -348,3 +349,185 @@ def integrity_check(connection: sqlite3.Connection) -> None:
     result = connection.execute("PRAGMA integrity_check").fetchone()[0]
     if result != "ok":
         raise RuntimeError(f"SQLite integrity_check 失败: {result}")
+
+
+def queue_fetched_papers(
+    connection: sqlite3.Connection,
+    papers: Iterable[Dict[str, Any]],
+    version_behavior: str = "ignore",
+    seen_at: Optional[str] = None,
+) -> Dict[str, int]:
+    seen = seen_at or utc_now()
+    added = 0
+    version_updates = 0
+
+    with connection:
+        for paper in papers:
+            arxiv_id, parsed_version = parse_arxiv_id(
+                str(paper.get("arxiv_id") or paper.get("link") or "")
+            )
+            if not arxiv_id:
+                continue
+            incoming_version = paper.get("arxiv_version", paper.get("version", parsed_version))
+            existing = connection.execute(
+                "SELECT version FROM papers WHERE arxiv_id = ?", (arxiv_id,)
+            ).fetchone()
+            old_version = existing["version"] if existing else None
+            arxiv_id = upsert_paper(connection, paper, seen)
+
+            if existing is None:
+                upsert_inbox_item(
+                    connection, f"paper:{arxiv_id}", arxiv_id, "paper", seen
+                )
+                added += 1
+                continue
+
+            if (
+                version_behavior in {"append_notice", "replace"}
+                and isinstance(old_version, int)
+                and isinstance(incoming_version, int)
+                and incoming_version > old_version
+            ):
+                item_key = f"version:{arxiv_id}:v{incoming_version}"
+                existed = connection.execute(
+                    "SELECT 1 FROM inbox_items WHERE item_key = ?", (item_key,)
+                ).fetchone()
+                upsert_inbox_item(
+                    connection,
+                    item_key,
+                    arxiv_id,
+                    "version_update",
+                    seen,
+                    from_version=old_version,
+                    to_version=incoming_version,
+                )
+                if existed is None:
+                    version_updates += 1
+
+    return {"added": added, "version_updates": version_updates}
+
+
+def pending_items(connection: sqlite3.Connection, limit: int) -> List[sqlite3.Row]:
+    return connection.execute(
+        """
+        SELECT
+            i.item_key, i.kind, i.from_version, i.to_version, i.created_at,
+            p.arxiv_id, p.version, p.category, p.title, p.authors, p.summary,
+            p.link, p.published_at
+        FROM inbox_items AS i
+        JOIN papers AS p ON p.arxiv_id = i.arxiv_id
+        WHERE i.status = 'pending'
+        ORDER BY i.created_at DESC, i.item_key DESC
+        LIMIT ?
+        """,
+        (max(1, int(limit)),),
+    ).fetchall()
+
+
+def _render_item(config: Dict[str, Any], row: sqlite3.Row) -> str:
+    if row["kind"] == "version_update":
+        template = get_config_value(
+            config,
+            "fetch.formatting.version_update_notice_template",
+            "- [ ] (版本更新) {date}：{arxiv_id} 从 v{old_version} 更新到 v{new_version} - [{title}]({link})",
+        )
+        return str(template).format(
+            date=str(row["created_at"])[:10],
+            arxiv_id=row["arxiv_id"],
+            old_version=row["from_version"],
+            new_version=row["to_version"],
+            title=row["title"],
+            link=row["link"],
+        )
+
+    template = get_config_value(
+        config,
+        "fetch.formatting.item_template",
+        "- [ ] **[{category}]** [{title}]({link}) *by {author} ({published})* - _{summary}_",
+    )
+    return str(template).format(
+        category=row["category"],
+        title=row["title"],
+        link=row["link"],
+        author=row["authors"],
+        published=row["published_at"] or "Unknown Date",
+        summary=row["summary"],
+    )
+
+
+def _inbox_prefix(path: str, delimiter: str) -> str:
+    if not os.path.exists(path):
+        return "# 📥 My Arxiv Inbox\n\n这里是你的待阅读区。\n\n---\n"
+    with open(path, "r", encoding="utf-8") as file:
+        lines = file.readlines()
+    for index, line in enumerate(lines):
+        if line.strip() == delimiter:
+            return "".join(lines[: index + 1]).rstrip() + "\n"
+    return "".join(lines).rstrip() + f"\n\n{delimiter}\n"
+
+
+def render_inbox(
+    connection: sqlite3.Connection,
+    config: Dict[str, Any],
+    path: str,
+) -> int:
+    limit = int(get_config_value(config, "inbox.render.max_items", 200))
+    max_bytes = int(get_config_value(config, "inbox.render.max_bytes", 900000))
+    delimiter = str(
+        get_config_value(config, "fetch.formatting.inbox_insert_after_delimiter", "---")
+    )
+    rows = pending_items(connection, limit)
+    prefix = _inbox_prefix(path, delimiter)
+
+    def build(selected: List[sqlite3.Row]) -> str:
+        sections: List[str] = [prefix.rstrip(), ""]
+        current_date: Optional[str] = None
+        group_lines: List[str] = []
+        for row in selected:
+            item_date = str(row["created_at"])[:10]
+            if item_date != current_date:
+                if group_lines:
+                    sections.extend(group_lines)
+                    sections.append("")
+                current_date = item_date
+                group_lines = []
+                count = sum(
+                    1
+                    for candidate in selected
+                    if str(candidate["created_at"])[:10] == item_date
+                )
+                heading = get_config_value(
+                    config,
+                    "fetch.formatting.daily_heading_template",
+                    "## {date} 更新 {count} 篇新论文",
+                )
+                sections.append(str(heading).format(date=item_date, count=count))
+            group_lines.append(_render_item(config, row))
+        if group_lines:
+            sections.extend(group_lines)
+        return "\n".join(sections).rstrip() + "\n"
+
+    content = build(rows)
+    while rows and len(content.encode("utf-8")) > max_bytes:
+        rows.pop()
+        content = build(rows)
+
+    directory = os.path.dirname(os.path.abspath(path))
+    os.makedirs(directory, exist_ok=True)
+    fd, temporary_path = tempfile.mkstemp(prefix=".inbox-", suffix=".tmp", dir=directory)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as file:
+            file.write(content)
+        os.replace(temporary_path, path)
+    except Exception:
+        if os.path.exists(temporary_path):
+            os.unlink(temporary_path)
+        raise
+
+    with connection:
+        connection.execute("UPDATE inbox_items SET visible = 0")
+        connection.executemany(
+            "UPDATE inbox_items SET visible = 1 WHERE item_key = ?",
+            [(row["item_key"],) for row in rows],
+        )
+    return len(rows)
