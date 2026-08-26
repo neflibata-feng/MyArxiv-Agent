@@ -1,0 +1,21 @@
+name: 文档改进 / Documentation
+description: 改进或补充文档 / Improvements or additions to documentation
+title: "[Docs]: "
+labels: [documentation]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: 文档位置 / Documentation location
+      placeholder: README、页面或链接 / README, page, or URL
+  - type: textarea
+    id: change
+    attributes:
+      label: 建议修改 / Suggested change
+      description: 请说明当前内容的问题以及建议如何修改。/ Describe the current problem and your suggested improvement.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: 补充信息 / Additional context

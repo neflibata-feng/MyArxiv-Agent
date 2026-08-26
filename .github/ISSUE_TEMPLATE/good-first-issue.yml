@@ -1,0 +1,22 @@
+name: 新手任务 / Good first issue
+description: 适合新贡献者 / Good for newcomers
+title: "[Good First Issue]: "
+labels: [good first issue]
+body:
+  - type: textarea
+    id: task
+    attributes:
+      label: 任务说明 / Task description
+      description: 清晰描述适合新贡献者完成的工作。/ Clearly describe the work suitable for a newcomer.
+    validations:
+      required: true
+  - type: textarea
+    id: guidance
+    attributes:
+      label: 实现提示 / Implementation guidance
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准 / Acceptance criteria
+    validations:
+      required: true

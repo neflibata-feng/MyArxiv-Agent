@@ -1,0 +1,19 @@
+name: 寻求帮助 / Help wanted
+description: 需要额外关注或协助 / Extra attention is needed
+title: "[Help Wanted]: "
+labels: [help wanted]
+body:
+  - type: textarea
+    id: help
+    attributes:
+      label: 需要的帮助 / Help needed
+    validations:
+      required: true
+  - type: textarea
+    id: attempted
+    attributes:
+      label: 已尝试的方法 / What has been tried
+  - type: textarea
+    id: context
+    attributes:
+      label: 补充信息 / Additional context

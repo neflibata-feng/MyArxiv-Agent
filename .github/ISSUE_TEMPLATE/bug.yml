@@ -1,0 +1,35 @@
+name: 缺陷报告 / Bug report
+description: 软件未按预期工作 / Something isn't working
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述 / Bug description
+      description: 请说明发生了什么。/ Tell us what happened.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤 / Steps to reproduce
+      placeholder: "1. ...\n2. ...\n3. ..."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为 / Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境信息 / Environment
+      placeholder: "OS, Python, browser, commit/version..."
+  - type: textarea
+    id: context
+    attributes:
+      label: 补充信息 / Additional context
+      description: 添加已移除敏感信息的日志、截图或链接。/ Add sanitized logs, screenshots, or links.
