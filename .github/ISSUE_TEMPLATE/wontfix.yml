@@ -1,0 +1,18 @@
+name: 不予处理 / Won't fix
+description: 此问题不会处理 / This will not be worked on
+title: "[Wontfix]: "
+labels: [wontfix]
+body:
+  - type: textarea
+    id: target
+    attributes:
+      label: 相关内容 / Related content
+      description: 请提供相关 Issue、PR 或请求的链接。/ Link to the related issue, pull request, or request.
+    validations:
+      required: true
+  - type: textarea
+    id: reason
+    attributes:
+      label: 不予处理的原因 / Reason not to pursue
+    validations:
+      required: true

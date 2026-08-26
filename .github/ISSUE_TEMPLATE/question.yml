@@ -1,0 +1,19 @@
+name: 问题咨询 / Question
+description: 请求进一步信息 / Further information is requested
+title: "[Question]: "
+labels: [question]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: 你的问题 / Your question
+    validations:
+      required: true
+  - type: textarea
+    id: researched
+    attributes:
+      label: 已查阅的资料 / What you have researched
+  - type: textarea
+    id: context
+    attributes:
+      label: 补充信息 / Additional context

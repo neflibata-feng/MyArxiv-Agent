@@ -1,0 +1,18 @@
+name: 无效内容 / Invalid
+description: 内容或情况不正确 / This doesn't seem right
+title: "[Invalid]: "
+labels: [invalid]
+body:
+  - type: textarea
+    id: target
+    attributes:
+      label: 相关内容 / Related content
+      description: 请提供相关 Issue、PR 或内容的链接。/ Link to the related issue, pull request, or content.
+    validations:
+      required: true
+  - type: textarea
+    id: reason
+    attributes:
+      label: 无效原因 / Why this is invalid
+    validations:
+      required: true
