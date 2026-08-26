@@ -2,8 +2,8 @@ name: Daily Arxiv Fetcher
 
 on:
   schedule:
-    # 每天 UTC 0:30 (北京时间 8:30) 运行
-    - cron: '30 0 * * *'
+    # 每天 UTC 1:25 (北京时间 9:25) 运行
+    - cron: '25 1 * * *'
   workflow_dispatch:
     inputs:
       rate_limit_retry:
