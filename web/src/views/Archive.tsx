@@ -17,10 +17,10 @@ interface ArchiveViewProps {
 
 export function ArchiveView({ client, t, searchTerm, config }: ArchiveViewProps) {
    const rootPath = useMemo(() => config?.paths?.papers_dir || 'Papers', [config])
+   const [showFiles, setShowFiles] = useState(false)
    const [activeFile, setActiveFile] = useState<RepoFile | null>(null)
    const [content, setContent] = useState<string>('')
    const [loading, setLoading] = useState(false)
-   const [showFiles, setShowFiles] = useState(false)
 
    const isMarkdown = (path?: string | null) => !!path && path.toLowerCase().endsWith('.md')
 
@@ -30,7 +30,6 @@ export function ArchiveView({ client, t, searchTerm, config }: ArchiveViewProps)
    }, [rootPath])
 
    const loadFile = async (file: RepoFile) => {
-      setShowFiles(false)
       setActiveFile(file)
       if (!isMarkdown(file.path)) {
          setContent('')
@@ -54,7 +53,7 @@ export function ArchiveView({ client, t, searchTerm, config }: ArchiveViewProps)
                      client={client}
                      rootPath={rootPath}
                      selectedPath={activeFile?.path}
-                     onSelectFile={loadFile}
+                     onSelectFile={file => { setShowFiles(false); loadFile(file) }}
                      searchTerm={searchTerm}
                      fileFilter={(f) => f.type === 'file' && f.name.toLowerCase().endsWith('.md')}
                      loadingLabel={t.loading}
