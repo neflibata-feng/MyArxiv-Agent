@@ -25,31 +25,35 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
   const [activeGroup, setActiveGroup] = useState<string | null>(null)
 
   const fetchInbox = async () => {
+    let failed = true
     setLoading(true)
     setError('')
     try {
       const { content, sha } = await client.getFileContent("Inbox.md")
       const parsed = GithubClient.parseInbox(content)
+      failed = false
       setOriginalContent(content)
       setSha(sha)
       setPapers(parsed)
       setInitialPapers(parsed)
       if (parsed.length > 0 && !activeGroup) setActiveGroup(parsed[0].group || null)
-    } catch(e) { console.error(e); setError(t.inboxLoadFailed) }
-    finally { setLoading(false) }
+    } catch(e) { console.error(e) } 
+    finally { if (failed) setError(t.inboxLoadFailed); setLoading(false) }
   }
 
   useEffect(() => { fetchInbox() }, [])
 
   const handleSync = async () => {
+    let failed = true
     setSyncing(true)
     setError('')
     try {
       const newContent = GithubClient.reconstructInbox(originalContent, papers)
       await client.updateFile("Inbox.md", newContent, sha, `MyArxiv-Agent Sync ${new Date().toISOString()}`)
+      failed = false
       await fetchInbox()
-    } catch(e) { console.error(e); setError(t.syncFail) }
-    finally { setSyncing(false) }
+    } catch(e) { console.error(e) } 
+    finally { if (failed) setError(t.syncFail); setSyncing(false) }
   }
 
   const changesCount = useMemo(() => {
