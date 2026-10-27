@@ -23,10 +23,10 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
   const [syncing, setSyncing] = useState(false)
   const [activeGroup, setActiveGroup] = useState<string | null>(null)
 
-  const fetchInbox = async () => {
+  const fetchInbox = async (force = false) => {
     setLoading(true)
     try {
-      const { content, sha } = await client.getFileContent("Inbox.md")
+      const { content, sha } = await client.getFileContent("Inbox.md", force)
       const parsed = GithubClient.parseInbox(content)
       setOriginalContent(content)
       setSha(sha)
@@ -117,7 +117,7 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
                 {searchTerm && <Badge variant="secondary">{t.found} {filteredPapers.length}</Badge>}
              </span>
              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={fetchInbox} disabled={loading}>
+                <Button variant="outline" size="sm" onClick={() => { if (!changesCount || window.confirm(t.refreshDiscard)) fetchInbox(true) }} disabled={loading || syncing}>
                    <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} /> {t.refresh}
                 </Button>
                 <Button size="sm" onClick={handleSync} disabled={syncing}>
