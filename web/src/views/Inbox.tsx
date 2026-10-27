@@ -35,7 +35,7 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
       setPapers(parsed)
       setInitialPapers(parsed)
       if (parsed.length > 0 && !activeGroup) setActiveGroup(parsed[0].group || null)
-    } catch(e) { console.error(e) }
+    } catch(e) { console.error(e) } 
     finally { setLoading(false) }
   }
 
