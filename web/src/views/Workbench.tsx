@@ -65,8 +65,8 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
                </div>
        </div>
        
-       <div className="flex-1 flex flex-col h-full bg-background overflow-hidden">
-          <Button className="md:hidden m-3 self-start" variant="outline" onClick={() => setShowFiles(true)} aria-expanded={showFiles}>{t.openNotes}</Button>
+       <Button className="md:hidden absolute top-3 right-3 z-10" variant="outline" onClick={() => setShowFiles(true)} aria-expanded={showFiles}>{t.openNotes}</Button>
+       <div className="flex-1 flex flex-col h-full bg-background overflow-hidden pt-14 md:pt-0">
           {activeFile ? (
              <>
                <div className="h-12 border-b flex items-center justify-between px-4 sticky top-0 bg-background/95 backdrop-blur z-10">
