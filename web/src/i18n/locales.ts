@@ -51,6 +51,7 @@ export const I18N = {
 
     selectMarkdownFile: "请选择一个 Markdown 文件",
     mdOnlyPreview: "仅支持预览 .md 文件",
+    archiveLoadFailed: "档案加载失败，请检查文件路径或访问权限。",
     open: "打开",
     emptyFile: "*空文件*",
     writeMarkdownHere: "在这里编写 Markdown...",
@@ -120,6 +121,7 @@ export const I18N = {
 
     selectMarkdownFile: "Select a markdown file",
     mdOnlyPreview: "Only .md preview is supported.",
+    archiveLoadFailed: "Failed to load the archive. Check the path and access.",
     open: "Open",
     emptyFile: "*Empty file*",
     writeMarkdownHere: "Write markdown here...",
