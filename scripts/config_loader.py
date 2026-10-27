@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from typing import Any, Dict
 
 import yaml
@@ -39,9 +40,10 @@ def _parse_env_value(raw: str) -> Any:
     if lower in {"true", "false"}:
         return lower == "true"
 
+    if re.fullmatch(r"[+-]?0[0-9]+", v):
+        return v
+
     try:
-        if lower.startswith("0") and len(lower) > 1 and lower[1].isdigit():
-            raise ValueError
         return int(v)
     except ValueError:
         pass
