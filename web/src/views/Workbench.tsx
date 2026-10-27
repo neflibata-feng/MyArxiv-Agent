@@ -60,6 +60,8 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
                      searchTerm={searchTerm}
                      fileFilter={(f) => f.type === 'file' && f.name.toLowerCase().endsWith('.md')}
                      loadingLabel={t.loading}
+                     errorLabel={t.directoryLoadFailed}
+                     retryLabel={t.retry}
                   />
                </div>
        </div>
