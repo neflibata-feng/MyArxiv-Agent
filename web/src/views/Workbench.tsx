@@ -50,6 +50,7 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
 
   return (
     <div className="flex h-full relative">
+       <Button className="md:hidden absolute bottom-3 right-3 z-10" variant="outline" onClick={() => setShowFiles(true)} aria-expanded={showFiles}>{t.openNotes}</Button>
        <div className={cn("w-64 border-r bg-card overflow-y-auto flex-col md:flex", showFiles ? "absolute inset-y-0 left-0 z-20 max-w-[80%] flex" : "hidden")}>
           <div className="p-4 font-semibold border-b bg-muted/20 flex items-center justify-between">{t.workbench}<Button className="md:hidden" variant="ghost" size="sm" onClick={() => setShowFiles(false)}>{t.closeNotes}</Button></div>
                <div className="flex-1 p-2">
@@ -65,8 +66,7 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
                </div>
        </div>
        
-       <Button className="md:hidden absolute top-3 right-3 z-10" variant="outline" onClick={() => setShowFiles(true)} aria-expanded={showFiles}>{t.openNotes}</Button>
-       <div className="flex-1 flex flex-col h-full bg-background overflow-hidden pt-14 md:pt-0">
+       <div className="flex-1 flex flex-col h-full bg-background overflow-hidden">
           {activeFile ? (
              <>
                <div className="h-12 border-b flex items-center justify-between px-4 sticky top-0 bg-background/95 backdrop-blur z-10">
