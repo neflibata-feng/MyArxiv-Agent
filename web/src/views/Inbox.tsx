@@ -32,7 +32,6 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
       setSha(sha)
       setPapers(parsed)
       setInitialPapers(parsed)
-      if (parsed.length > 0 && !activeGroup) setActiveGroup(parsed[0].group || null)
     } catch(e) { console.error(e) } 
     finally { setLoading(false) }
   }
@@ -100,6 +99,7 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
        <aside className="w-64 border-r overflow-y-auto hidden md:block bg-muted/10 p-4">
           <h2 className="font-semibold mb-2 px-2 flex items-center gap-2"><Calendar className="h-4 w-4"/> {t.timeline}</h2>
           <div className="space-y-1">
+            <Button variant={activeGroup === null ? "secondary" : "ghost"} className="w-full justify-start" onClick={() => setActiveGroup(null)}>{t.allGroups}</Button>
             {groups.map(g => (
                <Button key={g.name} variant={activeGroup===g.name?"secondary":"ghost"} className="w-full justify-start h-auto py-2 text-left" onClick={()=>setActiveGroup(g.name)}>
                  <div className="w-full truncate">
@@ -124,6 +124,13 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
                    <Save className="h-4 w-4 mr-2"/> {t.sync} ({changesCount})
                 </Button>
              </div>
+          </div>
+          <div className="p-3 border-b md:hidden">
+            <label className="sr-only" htmlFor="inbox-group">{t.timeline}</label>
+            <select id="inbox-group" className="w-full rounded-md border bg-background p-2 text-sm" value={activeGroup ?? ""} onChange={e => setActiveGroup(e.target.value || null)}>
+              <option value="">{t.allGroups}</option>
+              {groups.map(g => <option key={g.name} value={g.name}>{g.name} ({g.papers.length})</option>)}
+            </select>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
              {displayed.map(p => (
