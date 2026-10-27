@@ -14,6 +14,7 @@ export interface Paper {
   id: string;
   title: string;
   originalLine: string;
+  sourceLine?: number;
   selected: boolean;
   raw: string;
   category?: string;
@@ -241,9 +242,9 @@ export class GithubClient {
             continue;
         }
 
-        const match = trimLine.match(/^- \[(x| )\] (.*)/);
+        const match = trimLine.match(/^- \[(x|X| )\] (.*)/);
         if (match) {
-            const isSelected = match[1] === "x";
+            const isSelected = match[1].toLowerCase() === "x";
             const rest = match[2];
             
             const updateMatch = rest.match(/^\(版本更新\)\s*(.*?)(?:\s*-\s*\[(.*?)\]\((.*?)\))?$/);
@@ -275,6 +276,7 @@ export class GithubClient {
 
                 papers.push({
                     id,
+                    sourceLine: i,
                     title,
                     originalLine: line,
                     selected: isSelected,
@@ -346,6 +348,7 @@ export class GithubClient {
 
                 papers.push({
                     id,
+                    sourceLine: i,
                     title,
                     originalLine: line,
                     selected: isSelected,
@@ -370,15 +373,17 @@ export class GithubClient {
     const newLines: string[] = [];
     
     // Build multiple lookup indexes for robust matching
-    const paperMap = new Map(papers.map(p => [p.id, p]));
+    const indexedPapers = new Map(papers.filter(p => p.sourceLine !== undefined).map(p => [p.sourceLine, p]));
+    const legacyPapers = papers.filter(p => p.sourceLine === undefined);
+    const paperMap = new Map(legacyPapers.map(p => [p.id, p]));
     // Also build a map by originalLine to catch papers whose id changed
-    const paperByRaw = new Map(papers.map(p => [p.raw, p]));
+    const paperByRaw = new Map(legacyPapers.map(p => [p.raw, p]));
     
     let state = 0;
     const hasDelimiter = lines.some(l => l.trim() === "---");
     if (!hasDelimiter) state = 1;
 
-    for (let line of lines) {
+    for (const [lineIndex, line] of lines.entries()) {
         const trimLine = line.trim();
         
         if (state === 0) {
@@ -389,14 +394,15 @@ export class GithubClient {
             continue;
         }
 
-        const match = trimLine.match(/^- \[(x| )\] (.*)/);
+        const match = trimLine.match(/^- \[(x|X| )\] (.*)/);
         if (match) { 
-             let paperMatch: Paper | undefined;
+             let paperMatch: Paper | undefined = indexedPapers.get(lineIndex);
+             if (paperMatch && paperMatch.originalLine.trim() !== trimLine) paperMatch = undefined;
              const rest = match[2];
              
              // Try 1: match by arXiv ID extracted from the line
              const linkMatch = trimLine.match(/arxiv\.org\/abs\/([^/)\s]+)/);
-             if (linkMatch) {
+             if (!paperMatch && linkMatch) {
                  const extractedId = linkMatch[1];
                  // Try exact id match first
                  paperMatch = paperMap.get(extractedId);
@@ -414,7 +420,7 @@ export class GithubClient {
              
              // Try 3: fallback - check if any paper's originalLine matches
              if (!paperMatch) {
-                 for (const p of papers) {
+                 for (const p of legacyPapers) {
                      if (p.originalLine.trim() === trimLine) {
                          paperMatch = p;
                          break;
@@ -424,7 +430,7 @@ export class GithubClient {
              
              if (paperMatch) {
                  const checkState = paperMatch.selected ? "x" : " ";
-                 const newLine = line.replace(/^- \[(x| )\]/, `- [${checkState}]`);
+                 const newLine = line.replace(/^(\s*)- \[(x|X| )\]/, `$1- [${checkState}]`);
                  newLines.push(newLine);
              }
         } else {
