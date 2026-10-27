@@ -47,7 +47,7 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
       const newContent = GithubClient.reconstructInbox(originalContent, papers)
       await client.updateFile("Inbox.md", newContent, sha, `MyArxiv-Agent Sync ${new Date().toISOString()}`)
       await fetchInbox()
-    } catch(e) { console.error(e) }
+    } catch(e) { console.error(e) } 
     finally { setSyncing(false) }
   }
 
