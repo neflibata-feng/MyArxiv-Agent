@@ -46,6 +46,8 @@ export const I18N = {
     saveFail: "保存失败",
     splitView: "编辑",
     singleView: "退出编辑",
+    openFiles: "选择档案文件",
+    closeFiles: "关闭文件列表",
     folder: "文件夹",
     file: "文件",
 
@@ -115,6 +117,8 @@ export const I18N = {
     saveFail: "Save Failed",
     splitView: "Split",
     singleView: "Single",
+    openFiles: "Choose archive file",
+    closeFiles: "Close file list",
     folder: "Folder",
     file: "File",
 
