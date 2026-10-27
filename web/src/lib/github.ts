@@ -171,7 +171,7 @@ export class GithubClient {
       return result;
     } catch (error) {
        console.error("Error fetching dir:", error);
-       return [];
+       throw error;
     }
   }
 
