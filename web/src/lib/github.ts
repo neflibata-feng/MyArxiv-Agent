@@ -67,16 +67,16 @@ export class GithubClient {
     const sourceDir = sourcePath.includes('/')
       ? sourcePath.split('/').slice(0, -1)
       : [];
-    const parts = path.startsWith('/') ? [] : [...sourceDir];
+    const parts = path.startsWith('/') ? [] : sourceDir.map(encodeURIComponent);
     for (const part of path.replace(/^\.\//, '').split('/')) {
       if (!part || part === '.') continue;
       if (part === '..') parts.pop();
-      else parts.push(part);
+      else {
+        try { parts.push(encodeURIComponent(decodeURIComponent(part))); }
+        catch { parts.push(encodeURIComponent(part)); }
+      }
     }
-    const encodedPath = parts.map(part => {
-      try { return encodeURIComponent(decodeURIComponent(part)); }
-      catch { return encodeURIComponent(part); }
-    }).join('/');
+    const encodedPath = parts.join('/');
     const encodedBranch = this.branch.split('/').map(encodeURIComponent).join('/');
     return `https://raw.githubusercontent.com/${encodeURIComponent(this.owner)}/${encodeURIComponent(this.repo)}/${encodedBranch}/${encodedPath}${suffix}`;
   }
