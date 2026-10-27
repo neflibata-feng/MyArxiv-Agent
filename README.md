@@ -82,6 +82,8 @@
 ```
 ---
 
+网页通过 GitHub 读取较大的 Markdown 文件时，会使用 Git Blob 内容接口；文件仍受 GitHub API 的大小限制。
+
 ## 使用指南
 
 ### 核心流程和使用步骤
@@ -153,8 +155,6 @@
   - 主要脚本：`scripts/search_google_scholar.py`、`scripts/search_pubmed.py`、`scripts/doi_to_bibtex.py`、`scripts/validate_citations.py` 等
 
 ---
-
-网页通过 GitHub 读取较大的 Markdown 文件时，会使用 Git Blob 内容接口；文件仍受 GitHub API 的大小限制。
 
 ### 常见问题
 - **时间相关问题**
