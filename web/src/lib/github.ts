@@ -59,18 +59,26 @@ export class GithubClient {
       return value;
     }
 
+    const suffixStart = value.search(/[?#]/);
+    const path = suffixStart < 0 ? value : value.slice(0, suffixStart);
+    const suffix = suffixStart < 0 ? '' : value.slice(suffixStart);
+    if (!path) return value;
+
     const sourceDir = sourcePath.includes('/')
       ? sourcePath.split('/').slice(0, -1)
       : [];
-    const parts = value.startsWith('/') ? [] : [...sourceDir];
-    for (const part of value.replace(/^\.\//, '').split('/')) {
+    const parts = path.startsWith('/') ? [] : [...sourceDir];
+    for (const part of path.replace(/^\.\//, '').split('/')) {
       if (!part || part === '.') continue;
       if (part === '..') parts.pop();
       else parts.push(part);
     }
-    const encodedPath = parts.map(encodeURIComponent).join('/');
+    const encodedPath = parts.map(part => {
+      try { return encodeURIComponent(decodeURIComponent(part)); }
+      catch { return encodeURIComponent(part); }
+    }).join('/');
     const encodedBranch = this.branch.split('/').map(encodeURIComponent).join('/');
-    return `https://raw.githubusercontent.com/${encodeURIComponent(this.owner)}/${encodeURIComponent(this.repo)}/${encodedBranch}/${encodedPath}`;
+    return `https://raw.githubusercontent.com/${encodeURIComponent(this.owner)}/${encodeURIComponent(this.repo)}/${encodedBranch}/${encodedPath}${suffix}`;
   }
 
   private getFromCache<T>(key: string): T | null {
