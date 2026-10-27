@@ -25,9 +25,9 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
   const [activeGroup, setActiveGroup] = useState<string | null>(null)
 
   const fetchInbox = async () => {
-    let failed = true
     setLoading(true)
     setError('')
+    let failed = true
     try {
       const { content, sha } = await client.getFileContent("Inbox.md")
       const parsed = GithubClient.parseInbox(content)
