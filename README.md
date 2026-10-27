@@ -112,6 +112,8 @@
 支持用环境变量覆盖 `config.yaml` 中的任意配置项：
 - 前缀：`ARXIV_AGENT__`
 - 层级分隔：`__`（双下划线）
+带前导零的整数形式值（如 `001`）保留为字符串，避免编号被转换。
+
 示例：
 - `ARXIV_AGENT__fetch__arxiv_api__max_results=200`
 - `ARXIV_AGENT__fetch__query__categories=["cs.AI","cs.CL"]`
