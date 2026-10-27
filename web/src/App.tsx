@@ -53,12 +53,16 @@ function App() {
   useEffect(() => {
     localStorage.setItem('app_theme', theme)
     const root = window.document.documentElement
-    root.classList.remove('light', 'dark')
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const applyTheme = () => {
+      const resolved = theme === 'system' ? (media.matches ? 'dark' : 'light') : theme
+      root.classList.remove('light', 'dark')
+      root.classList.add(resolved)
+    }
+    applyTheme()
     if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-      root.classList.add(systemTheme)
-    } else {
-      root.classList.add(theme)
+      media.addEventListener('change', applyTheme)
+      return () => media.removeEventListener('change', applyTheme)
     }
   }, [theme])
 
