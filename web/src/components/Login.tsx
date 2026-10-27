@@ -37,6 +37,7 @@ export function Login({
             <CardTitle className="text-2xl">{t.welcome}</CardTitle>
             <p className="text-sm text-muted-foreground mt-2">{t.connectDesc}</p>
          </CardHeader>
+         <form onSubmit={event => { event.preventDefault(); if (token && repoStr) handleLogin() }}>
          <CardContent className="space-y-4">
             <div className="space-y-2">
                <input 
@@ -53,10 +54,11 @@ export function Login({
                  onChange={e => setToken(e.target.value)}
                />
             </div>
-            <Button className="w-full" onClick={handleLogin} disabled={!token || !repoStr}>
+            <Button type="submit" className="w-full" disabled={!token || !repoStr}>
               {t.connect}
             </Button>
          </CardContent>
+         </form>
          <CardFooter className="justify-center text-xs text-muted-foreground">
             <a href="https://github.com/neflibata-feng" target="_blank" rel="noopener noreferrer" className="hover:underline">
                {t.copyright}
