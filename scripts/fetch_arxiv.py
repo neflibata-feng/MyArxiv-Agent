@@ -300,6 +300,8 @@ def fetch_papers():
             last_request_ts = time.time()
             resp.raise_for_status()
             feed = feedparser.parse(resp.text)
+            if feed.bozo or not feed.version.startswith("atom"):
+                raise ValueError("arXiv API 返回的内容不是有效的 Atom 订阅")
             last_error = None
             break
         except Exception as e:
@@ -323,8 +325,7 @@ def fetch_papers():
             time.sleep(sleep_seconds)
 
     if last_error is not None:
-        print(f"获取数据错误: {last_error}")
-        return []
+        raise RuntimeError(f"获取 arXiv 数据失败: {last_error}") from last_error
 
     papers = []
     for entry in feed.entries:
