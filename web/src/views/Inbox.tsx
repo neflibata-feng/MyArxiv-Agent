@@ -129,6 +129,7 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
             <label className="sr-only" htmlFor="inbox-group">{t.timeline}</label>
             <select id="inbox-group" className="w-full rounded-md border bg-background p-2 text-sm" value={activeGroup ?? ""} onChange={e => setActiveGroup(e.target.value || null)}>
               <option value="">{t.allGroups}</option>
+              {activeGroup && !groups.some(g => g.name === activeGroup) && <option value={activeGroup}>{activeGroup} (0)</option>}
               {groups.map(g => <option key={g.name} value={g.name}>{g.name} ({g.papers.length})</option>)}
             </select>
           </div>
