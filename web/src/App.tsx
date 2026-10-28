@@ -28,6 +28,7 @@ function App() {
   const [repoStr, setRepoStr] = useState<string>(() => localStorage.getItem('github_repo') || "")
   
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
+  const [loginError, setLoginError] = useState(false)
   const [client, setClient] = useState<GithubClient | null>(null)
   const [activeTab, setActiveTab] = useState<Tab>('home')
   const [searchTerm, setSearchTerm] = useState("")
@@ -88,12 +89,17 @@ function App() {
   }, [lang])
 
   const connect = (repo: string, pat: string) => {
-    if (!pat || !repo.includes('/')) return
-    const parts = repo.split('/')
-    if (parts.length < 2) return
-    setClient(new GithubClient(pat, parts[0], parts[1]))
-    localStorage.setItem('github_token', pat)
-    localStorage.setItem('github_repo', repo)
+    const normalizedRepo = repo.trim()
+    const normalizedToken = pat.trim()
+    if (!normalizedToken || !/^[^/\s]+\/[^/\s]+$/.test(normalizedRepo)) {
+      setLoginError(true)
+      return
+    }
+    const [owner, name] = normalizedRepo.split('/')
+    setLoginError(false)
+    setClient(new GithubClient(normalizedToken, owner, name))
+    localStorage.setItem('github_token', normalizedToken)
+    localStorage.setItem('github_repo', normalizedRepo)
   }
 
   // Auto-connect if saved token+repo are present
@@ -126,6 +132,7 @@ function App() {
         repoStr={repoStr} setRepoStr={setRepoStr}
         token={token} setToken={setToken}
         handleLogin={handleLogin}
+        loginError={loginError}
       />
     )
   }
