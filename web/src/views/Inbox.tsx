@@ -17,6 +17,7 @@ interface InboxViewProps {
 }
 
 export function InboxView({ client, t, searchTerm }: InboxViewProps) {
+  const [onlySelected, setOnlySelected] = useState(false)
   const [papers, setPapers] = useState<Paper[]>([])
   const [initialPapers, setInitialPapers] = useState<Paper[]>([])
   const [originalContent, setOriginalContent] = useState<string>("")
@@ -25,7 +26,6 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState('')
   const [activeGroup, setActiveGroup] = useState<string | null>(null)
-  const [onlySelected, setOnlySelected] = useState(false)
 
   const fetchInbox = async (force = false) => {
     setLoading(true)
