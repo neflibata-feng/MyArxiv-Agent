@@ -59,6 +59,8 @@ export const I18N = {
     emptyFile: "*空文件*",
     writeMarkdownHere: "在这里编写 Markdown...",
     selectFileToEdit: "请选择一个文件进行编辑",
+    discardUnsaved: "当前笔记有未保存的修改，确定切换文件吗？",
+    loadFileFailed: "加载文件失败，当前笔记未更改。",
 
     uiSection: "界面",
     pathsSection: "路径",
@@ -132,6 +134,8 @@ export const I18N = {
     emptyFile: "*Empty file*",
     writeMarkdownHere: "Write markdown here...",
     selectFileToEdit: "Select a file to edit",
+    discardUnsaved: "Discard unsaved changes and switch files?",
+    loadFileFailed: "Failed to load the file. The current note was kept.",
 
     uiSection: "UI",
     pathsSection: "Paths",

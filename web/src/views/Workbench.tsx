@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { GithubClient, RepoFile } from '@/lib/github'
 import { Translation } from '@/i18n/locales'
 import { Button } from '@/components/ui/button'
@@ -21,10 +21,17 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
   const [viewMode, setViewMode] = useState<'split' | 'single'>('single')
   const [isEditing, setIsEditing] = useState(false)
   const [dirty, setDirty] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const requestId = useRef(0)
 
    const rootPath = config?.paths?.notes_dir || 'Notes'
 
    useEffect(() => {
+      requestId.current += 1
+      setLoading(false)
+      setError('')
       setActiveFile(null)
       setContent('')
       setDirty(false)
@@ -32,19 +39,40 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
    }, [rootPath])
 
   const loadFile = async (file: RepoFile) => {
-    setActiveFile(file)
-    setDirty(false)
-    setIsEditing(false)
-    const { content } = await client.getFileContent(file.path)
-    setContent(content)
+    if (saving || (dirty && !window.confirm(t.discardUnsaved))) return
+    const id = ++requestId.current
+    setLoading(true)
+    setError('')
+    try {
+      const result = await client.getFileContent(file.path)
+      if (id !== requestId.current) return
+      setActiveFile({ ...file, sha: result.sha })
+      setContent(result.content)
+      setDirty(false)
+      setIsEditing(false)
+    } catch {
+      if (id === requestId.current) setError(t.loadFileFailed)
+    } finally {
+      if (id === requestId.current) setLoading(false)
+    }
   }
 
   const saveFile = async () => {
-    if (!activeFile) return
-    await client.updateFile(activeFile.path, content, activeFile.sha, `Update Note ${activeFile.name}`)
-    const { sha } = await client.getFileContent(activeFile.path, true) // Force refresh
-    setActiveFile({ ...activeFile, sha })
-    setDirty(false)
+    if (!activeFile || loading || saving) return
+    const id = requestId.current
+    setSaving(true)
+    setError('')
+    try {
+      await client.updateFile(activeFile.path, content, activeFile.sha, `Update Note ${activeFile.name}`)
+      const { sha } = await client.getFileContent(activeFile.path, true)
+      if (id !== requestId.current) return
+      setActiveFile({ ...activeFile, sha })
+      setDirty(false)
+    } catch {
+      if (id === requestId.current) setError(t.saveFail)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -65,6 +93,8 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
        </div>
        
        <div className="flex-1 flex flex-col h-full bg-background overflow-hidden">
+          {error && <div role="alert" className="p-3 text-sm text-destructive">{error}</div>}
+          {loading && <div role="status" className="p-3 text-sm">{t.loading}</div>}
           {activeFile ? (
              <>
                <div className="h-12 border-b flex items-center justify-between px-4 sticky top-0 bg-background/95 backdrop-blur z-10">
@@ -77,7 +107,7 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
                         {viewMode === 'split' ? <Minimize className="h-4 w-4 mr-2"/> : <SplitSquareHorizontal className="h-4 w-4 mr-2"/>}
                         {viewMode === 'split' ? t.singleView : t.splitView}
                      </Button>
-                     <Button size="sm" disabled={!dirty} onClick={saveFile}>
+                     <Button size="sm" disabled={!dirty || loading || saving} onClick={saveFile}>
                         <Save className="h-4 w-4 mr-2"/> {t.save}
                      </Button>
                   </div>
@@ -88,6 +118,7 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
                    <div className={cn("flex-1 flex flex-col border-r h-full", viewMode === 'single' && !isEditing ? "hidden" : "block")}>
                       <textarea 
                         className="flex-1 w-full h-full p-6 resize-none focus:outline-none font-mono text-sm bg-background text-foreground leading-relaxed"
+                        disabled={loading || saving}
                         value={content}
                         onChange={e => { setContent(e.target.value); setDirty(true); setIsEditing(true) }}
                                     placeholder={t.writeMarkdownHere}
