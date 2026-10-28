@@ -52,12 +52,12 @@ export function MarkdownViewer({ content, resolveAssetUrl }: MarkdownViewerProps
        <ReactMarkdown
          remarkPlugins={[remarkGfm, remarkMath]}
          rehypePlugins={[
+           rehypeRaw,
+           [rehypeSanitize, sanitizeSchema],
            rehypeSlug,
            [rehypeAutolinkHeadings, { behavior: 'wrap' }],
            rehypeKatex,
            [rehypeExternalLinks, { target: '_blank', rel: ['noopener', 'noreferrer'] }],
-           rehypeRaw,
-           [rehypeSanitize, sanitizeSchema],
            rehypeHighlight,
          ]}
          components={{
