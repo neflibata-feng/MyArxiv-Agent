@@ -1,187 +1,41 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/neflibata-feng/MyArxiv-Agent/main/assets/ascii-art-text.png" alt="MyArxiv-Agent" width="500">
-</p>
+<p align="center"><img src="assets/ascii-art-text.png" alt="MyArxiv-Agent" width="500"></p>
+<p align="center"><a href="README.md">中文</a> · <strong>English</strong></p>
 
-<p align="center">
-  <a href="https://github.com/neflibata-feng/MyArxiv-Agent/actions/workflows/daily_scheduler.yml?query=branch%3Amain"><img src="https://img.shields.io/github/actions/workflow/status/neflibata-feng/MyArxiv-Agent/daily_scheduler.yml?branch=main&style=for-the-badge" alt="Daily Scheduler"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/Content%20License-CC%20BY--NC--SA%204.0-lightgrey?style=for-the-badge" alt="Content License"></a>
-  <a href="LICENSE-APACHE"><img src="https://img.shields.io/badge/Code%20License-Apache--2.0-blue?style=for-the-badge" alt="Code License"></a>
-</p>
+# MyArxiv-Agent
 
-<p align="center">
-  <a href="README.md">中文</a> · <strong>English</strong>
-</p>
+An open-source template for fetching arXiv papers, reviewing an inbox, archiving metadata, and keeping reading notes. The web client can also manage repository content. This repository supplies an empty starting point rather than a personal paper collection. Issues, suggestions, and pull requests are welcome.
 
-## About
+## Getting started
 
-- This is a personal arXiv knowledge workspace maintained and used by **neflibata-feng** to organize AI Agent papers, review daily updates, and write research notes.
-- Paper metadata comes from **arXiv**. `Inbox.md` is the daily review view, `Papers/` stores archived metadata, and `Notes/` contains personal notes and ideas.
-- The repository can also be used as a complete template: **fork** it, clear the example data, and adjust the configuration to create your own automated arXiv papers-and-notes workspace.
+1. Fork this repository, or use **Use this template** if the repository owner has enabled GitHub's template feature. Work in your own repository.
+2. Install Python 3.9 or later and dependencies from the repository root:
 
-### Migrate a fork for personal use
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # Windows: .venv\Scripts\activate
+   pip install -r scripts/requirements.txt
+   ```
 
-1. **Clear existing data**: Delete `data/arxiv.db`; clear the contents of `Papers/`, `Notes/`, and optionally `pdfs/`; leave `Inbox.md` with only the `---` delimiter and reset `Contents.md`. Keep the directories, scripts, and workflow files.
-2. **Update configuration**: Change `meta.owner`, categories, keywords, daily fetch count, and Inbox capacity in `config.yaml`.
-3. **Rebuild the database**: Install `scripts/requirements.txt`, then run `python scripts/migrate_to_sqlite.py` to create your empty SQLite database and Inbox view. Commit the initialized files.
-4. **Enable automation**: Enable workflows from the fork's Actions page. Under `Settings → Actions → General`, confirm that `GITHUB_TOKEN` can read and write repository contents. Manually run `Daily Arxiv Fetcher` once to verify the configuration.
-5. **Configure the web PAT**: Create a fine-grained PAT limited to the fork, grant only `Contents: Read and write`, and choose a reasonable expiry. Enter `your-user/repository` and the PAT on the web login page. Never place the PAT in the repository, `config.yaml`, or a commit. The current web UI stores it locally in the browser, so use it only on a trusted device.
-6. **Enable the web UI**: Manually run `Deploy Web App` to create the `gh-pages` branch, then configure `Settings → Pages` to publish from the root of that branch.
+3. Edit `config.yaml`, including `meta.owner`, `fetch.query`, `fetch.arxiv_api.max_results`, and `inbox.render`. Configuration can also be overridden with environment variables such as `ARXIV_AGENT__fetch__arxiv_api__max_results=100`.
+4. Run `python scripts/migrate_to_sqlite.py` to initialize the database. The command imports existing Inbox and Papers content; the new template starts empty. Back up existing data before migrating another repository.
+5. Run `python scripts/fetch_arxiv.py`. Check papers to archive or remove unwanted entries in `Inbox.md`, then run `python scripts/process_inbox.py`. Results appear in `Papers/`, `Notes/`, and `Contents.md`. Keep `data/arxiv.db` with these files: SQLite holds the complete state and Inbox is only a limited view.
 
-> After migration, SQLite is the complete data source and `Inbox.md` is only a fixed-size editable view. Do not clear history by deleting Inbox alone.
+Scheduled fetching and automatic archiving are not configured in this template. Configure scheduling, write permissions, and branch protection in your own repository if needed. Branches requiring pull requests reject direct pushes. Sync your repository before fetching, archiving, or editing through the web client.
 
----
+## Web client
 
-## License
+Run locally with `cd web`, `npm ci`, and `npm run dev`. Sign in with your own `owner/repository` and a fine-grained GitHub PAT limited to that repository with `Contents: Read and write`. The browser stores the PAT locally; use a trusted device and never commit the token. The client writes directly to `main`, so protected branch rules may prevent saves.
 
-- **Content license (unchanged)**: curated content and written materials (e.g., `Notes/`, Markdown docs, screenshots) are under **CC BY-NC-SA 4.0**. See [LICENSE](LICENSE).
-- **Architecture & code license**: the automation framework and code (e.g., `scripts/`, `web/`, `.github/workflows/`) are under **Apache-2.0**. See [LICENSE-APACHE](LICENSE-APACHE).
+No GitHub Actions workflows are included. You can use the local development server or run `npm run build` and publish `web/dist/` with a static hosting service.
 
-> Note: paper copyrights belong to the original authors/publishers; this repo is for study and engineering practice.
+## Project layout
 
----
+`scripts/` contains the Python tools; `config.yaml` controls queries and paths; `Inbox.md` and `Contents.md` are empty starting views; `Papers/` and `Notes/` hold archives and notes; `data/arxiv.db` is created during initialization; `web/` contains the web client; and `agent/skills/` contains reusable research and writing skills that are not automatically integrated into the fetch pipeline.
 
-## Disclaimer
+## Contributing
 
-1. This repository is non-commercial and respects IP. It provides metadata for **public** papers in the AI Agent area, does not store PDFs at scale, and will remove items upon request.
-2. Please follow applicable laws and academic norms and respect the original authors' rights.
-3. This repository primarily serves personal use; therefore, **contributions are accepted normally**.
-4. Still, in the spirit of openness and sharing, you're welcome to browse the curated papers and notes (a **star** is appreciated).
-5. This repository can also serve as a template for a personal arXiv automation knowledge workspace; feel free to **fork** and adapt it.
+Please open an issue to report problems or propose improvements, and submit pull requests with a clear description. Discuss larger changes in an issue first. Review your diff and run relevant checks: for web changes, run `npm ci` and `npm run build` in `web/`; use temporary data when testing fetching or archiving. Do not commit personal paper data, databases, build output, or credentials.
 
----
+## Licenses and credits
 
-## Screenshots
-
-- ![](https://raw.githubusercontent.com/neflibata-feng/MyArxiv-Agent/main/assets/5.png)
-- ![](https://raw.githubusercontent.com/neflibata-feng/MyArxiv-Agent/main/assets/4.png)
-- ![](https://raw.githubusercontent.com/neflibata-feng/MyArxiv-Agent/main/assets/3.png)
-- ![](https://raw.githubusercontent.com/neflibata-feng/MyArxiv-Agent/main/assets/2.png)
-- ![](https://raw.githubusercontent.com/neflibata-feng/MyArxiv-Agent/main/assets/1.png)
-
----
-
-## Repository Structure
-
-```plaintext
-/
-├── .github/             # GitHub Actions workflows
-├── scripts/             # automation scripts
-├── data/                # SQLite paper database
-├── agent/               # agent module (skills, WIP)
-├── assets/              # images and static assets
-├── Inbox.md             # fixed-size inbox (daily review)
-├── Contents.md          # index (auto-generated)
-├── pdfs/                # paper PDFs (optional)
-├── Papers/              # paper metadata archive
-├── Notes/               # personal notes
-├── config.yaml          # global config
-├── .gitignore           # git ignore rules
-├── web/                 # web UI source
-├── LICENSE              # content license
-├── LICENSE-APACHE       # code license
-└── README.md            # Chinese README
-```
-
----
-
-## Agent Module (WIP)
-
-The `agent/` directory is used to accumulate reusable **skills**. Each skill lives in its own folder and typically contains:
-- `SKILL.md`: what the skill is for (when to use, workflow, output conventions)
-- optional `scripts/` / `templates/` / `references/` / `assets/`
-
-> Current status: skills are already included and can be reused independently; they are **not yet** tightly integrated into the repo’s main automation pipeline (`scripts/` + GitHub Actions).
-
-### Skills List (based on the actual SKILL.md descriptions)
-
-> Note: treat each skill folder’s `SKILL.md` as the source of truth. Some skill docs may mention external capabilities/skills; always defer to what’s actually present in this repo.
-
-**CorePipeline (writing & documentation standards)**
-- `literature-review`: systematic literature review workflow (plan → search → synthesize → verify citations → output).
-  - main scripts: `scripts/search_databases.py`, `scripts/verify_citations.py`, `scripts/generate_pdf.py`
-  - outputs: structured Markdown; optional PDF
-- `scientific-writing`: scientific writing conventions and workflow (IMRAD; outline-first then prose; citation formatting and reproducible outputs).
-  - assets: `assets/scientific_report_template.tex`, `assets/scientific_report.sty`, `assets/REPORT_FORMATTING_GUIDE.md`
-- `markdown-mermaid-writing`: Markdown + Mermaid as the default documentation/diagram standard (style guides, diagram references, and templates).
-  - templates: research paper / PR / issue / kanban and more under `templates/`
-
-**DocumentProcessing (document conversion)**
-- `markitdown`: file-to-Markdown conversion based on Microsoft MarkItDown (PDF/DOCX/PPTX/XLSX/images with OCR/audio transcription/HTML, etc.).
-  - main scripts: `scripts/batch_convert.py`, `scripts/convert_literature.py`, `scripts/convert_with_ai.py`
-
-**Metadata & Retrieval**
-- `research-lookup`: real-time research lookup (auto-routes to different backends; supports forcing a backend).
-  - required env vars: `PARALLEL_API_KEY` and `OPENROUTER_API_KEY` (see `SKILL.md`)
-  - entry: `research_lookup.py` (and `scripts/research_lookup.py`)
-- `openalex-database`: OpenAlex-based scholarly search and analysis (works/authors/institutions/highly-cited/open access, etc.).
-  - main scripts: `scripts/openalex_client.py`, `scripts/query_helpers.py`
-  - notes: no API key required; an email is recommended to access the polite pool (higher rate limits)
-- `citation-management`: citation management (Google Scholar/PubMed search; metadata extraction/validation; BibTeX generation/formatting).
-  - main scripts: `scripts/search_google_scholar.py`, `scripts/search_pubmed.py`, `scripts/doi_to_bibtex.py`, `scripts/validate_citations.py`, etc.
-
-
-## Usage
-
-### Core Workflow
-
-1. **Daily Fetch**: Automatically fetches the latest papers for selected fields (default: AI Agent) into SQLite at a fixed time (default: 08:30 Beijing time). The default fetch cap is 150 papers per day, deduplicated by arXiv ID.
-2. **Review & Pick**: `Inbox.md` renders at most 200 pending items by default. Check papers to archive them, or delete unwanted lines to persist a dismissed state in SQLite; the next pending items are then added automatically.
-3. **Auto Archive**: After you commit changes to `Inbox.md`, the system will:
-   - Archive selected papers into `Papers/`.
-   - Create note templates under `Notes/`.
-   - Update the index in `Contents.md`.
-
-### Global Configuration
-
-The repo root provides `config.yaml` to centrally manage fetching, SQLite storage, formatting, archiving, and indexing.
-
-- Common options: categories/keywords, fetch count, SQLite path, Inbox item/byte limits, abstract truncation length, Inbox/Contents templates, archive layout, etc.
-- GitHub Actions uses this file by default; no extra changes needed.
-
-> `storage.sqlite.path` sets the database path. `inbox.render.max_items` and `inbox.render.max_bytes` limit the rendered `Inbox.md`; the database retains complete state while Inbox remains an editable view.
-
-> **arXiv API notes**
-> - `fetch.query.id_list`: Optional. Specify arXiv IDs (supports `vN`); YAML list or comma-separated string. With only `id_list`, fetches by exact IDs; with other query terms, follows arXiv semantics (intersection/filtering).
-> - `fetch.formatting.date_source`: `published`/`updated`, mapping to Atom `<published>` (v1) and `<updated>` (latest).
-> - `features.arxiv_version_update_behavior`: `ignore` suppresses version notices; `append_notice`/`replace` update stored version metadata and enqueue a version notice.
-
-### Environment Variable Overrides
-
-Supports overriding any `config.yaml` key via environment variables:
-
-- Prefix: `ARXIV_AGENT__`
-- Nested key separator: `__` (double underscore)
-
-Examples:
-
-- `ARXIV_AGENT__fetch__arxiv_api__max_results=200`
-- `ARXIV_AGENT__fetch__query__categories=["cs.AI","cs.CL"]`
-- `ARXIV_AGENT__inbox__render__max_items=300`
-
-### FAQ
-
-- **Time & scheduling**
-  - **Fetch schedule**
-    - arXiv typically starts updating around 08:00 (Beijing time) on weekdays. The default GitHub Actions schedule runs at 08:30 to catch daily updates consistently.
-    - There are usually no updates on weekends; you can restrict runs to weekdays if you prefer.
-  - **Cron not triggered?**
-    - GitHub Actions may be delayed during peak hours, ranging from minutes to hours.
-    - To mitigate this, workflows use caching by default; check whether dependency cache is hit.
-    - You can also use third-party schedulers (e.g., cron-job.org) to trigger GitHub Actions.
-    - If it still fails, try triggering the workflow manually.
-  - **arXiv API returns 429?**
-    - After three consecutive HTTP 429 responses, the workflow waits five minutes and restarts once. If the restarted run is rate-limited three more times, it stops and keeps the logs.
-
-- **Web UI**
-  - **Cannot load content**
-    - The web version is hosted on GitHub Pages and authenticates via a GitHub PAT.
-    - Make sure your PAT is configured and has sufficient permissions; otherwise you can read in the repo but cannot edit via the web UI.
-    - Create a fine-grained token in GitHub settings (Developer settings), select this repo, and grant read/write permissions.
-  - **How to use the web UI**
-    - You must fork this repo to your own account and enable GitHub Pages. The web UI needs write access to the repo, so it must be your fork.
-
----
-
-## Acknowledgements
-
-> Thank you to arXiv for use of its open access interoperability.
+Code and automation are licensed under [Apache-2.0](LICENSE-APACHE); documentation and other content are licensed under [CC BY-NC-SA 4.0](LICENSE). Papers remain the property of their authors and publishers. Thanks to arXiv for its open metadata.

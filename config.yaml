@@ -3,7 +3,7 @@
 # 版本配置
 meta:
   config_version: 1
-  owner: "neflibata-feng"
+  owner: ""
 
 # 文件路径配置（相对根目录）
 paths:
