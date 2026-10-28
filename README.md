@@ -117,6 +117,8 @@
    - 更新 `Contents.md` 目录索引。
 
 
+工作台编辑笔记时可使用 Ctrl+S（macOS 为 Command+S）保存。
+
 ### 网页 Markdown 预览
 
 网页支持行内与块级 LaTeX 公式、代码高亮和 HTML 折叠区。仓库 HTML 先经过安全清洗，再生成公式与高亮内容；公式样式随网页构建打包，无需外部 CDN。

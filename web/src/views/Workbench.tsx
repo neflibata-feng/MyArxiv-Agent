@@ -138,6 +138,12 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
                       <textarea 
                         className="flex-1 w-full h-full p-6 resize-none focus:outline-none font-mono text-sm bg-background text-foreground leading-relaxed"
                         disabled={loading || saving}
+                        onKeyDown={event => {
+                          if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's' && !event.nativeEvent.isComposing) {
+                            event.preventDefault()
+                            if (dirty && !loading && !saving) saveFile()
+                          }
+                        }}
                         value={content}
                         onChange={e => { setContent(e.target.value); setDirty(true); setIsEditing(true) }}
                                     placeholder={t.writeMarkdownHere}
