@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from collections import Counter
 import json
 import os
 import re
@@ -478,8 +479,10 @@ def render_inbox(
     )
     rows = pending_items(connection, limit)
     prefix = _inbox_prefix(path, delimiter)
+    rendered = {row["item_key"]: _render_item(config, row) for row in rows}
 
     def build(selected: List[sqlite3.Row]) -> str:
+        counts = Counter(str(row["created_at"])[:10] for row in selected)
         sections: List[str] = [prefix.rstrip(), ""]
         current_date: Optional[str] = None
         group_lines: List[str] = []
@@ -491,18 +494,14 @@ def render_inbox(
                     sections.append("")
                 current_date = item_date
                 group_lines = []
-                count = sum(
-                    1
-                    for candidate in selected
-                    if str(candidate["created_at"])[:10] == item_date
-                )
+                count = counts[item_date]
                 heading = get_config_value(
                     config,
                     "fetch.formatting.daily_heading_template",
                     "## {date} 更新 {count} 篇新论文",
                 )
                 sections.append(str(heading).format(date=item_date, count=count))
-            group_lines.append(_render_item(config, row))
+            group_lines.append(rendered[row["item_key"]])
         if group_lines:
             sections.extend(group_lines)
         return "\n".join(sections).rstrip() + "\n"
