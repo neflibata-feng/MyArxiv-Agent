@@ -122,7 +122,7 @@
 
 > `storage.sqlite.path` 用于设置数据库路径；`inbox.render.max_items` 与 `inbox.render.max_bytes` 用于限制 `Inbox.md` 的渲染容量。数据库保存完整状态，Inbox 仅作为可编辑视图。
 
-收件箱时间线支持查看全部日期；在移动设备上可通过日期选择器切换分组。
+收件箱会显示当前筛选结果数量；时间线支持查看全部日期；在移动设备上可通过日期选择器切换分组。
 
 > **arXiv API 参数补充说明**
 > - `fetch.query.id_list`：可选。指定 arXiv id（支持 `vN` 版本号）；支持 YAML 列表或逗号分隔字符串。仅提供 `id_list` 时按 id 精确拉取；若同时提供查询条件，则按官方语义取交集（过滤）。
