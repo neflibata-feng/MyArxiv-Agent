@@ -29,6 +29,7 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [savedContent, setSavedContent] = useState('')
   const requestId = useRef(0)
 
    const rootPath = config?.paths?.notes_dir || 'Notes'
@@ -49,6 +50,7 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
       setError('')
       setActiveFile(null)
       setContent('')
+      setSavedContent('')
       setDirty(false)
       setIsEditing(false)
    }, [rootPath])
@@ -63,6 +65,7 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
       if (id !== requestId.current) return
       setActiveFile({ ...file, sha: result.sha })
       setContent(result.content)
+      setSavedContent(result.content)
       setDirty(false)
       setIsEditing(false)
     } catch {
@@ -82,6 +85,7 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
       const { sha } = await client.getFileContent(activeFile.path, true)
       if (id !== requestId.current) return
       setActiveFile({ ...activeFile, sha })
+      setSavedContent(content)
       setDirty(false)
     } catch {
       if (id === requestId.current) setError(t.saveFail)
@@ -126,6 +130,12 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
                         {viewMode === 'split' ? <Minimize className="h-4 w-4 mr-2"/> : <SplitSquareHorizontal className="h-4 w-4 mr-2"/>}
                         {viewMode === 'split' ? t.singleView : t.splitView}
                      </Button>
+                     <Button variant="outline" size="sm" disabled={!dirty || loading || saving} onClick={() => {
+                        if (!window.confirm(t.confirmRevertNote)) return
+                        setContent(savedContent)
+                        setDirty(false)
+                        setIsEditing(false)
+                     }}>{t.revertNote}</Button>
                      <Button size="sm" disabled={!dirty || loading || saving} onClick={saveFile}>
                         <Save className="h-4 w-4 mr-2"/> {t.save}
                      </Button>
