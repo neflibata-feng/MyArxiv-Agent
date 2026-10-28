@@ -1,7 +1,7 @@
 name: Deploy brand site
 on:
   push:
-    branches: [main, codex/brand-site]
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
