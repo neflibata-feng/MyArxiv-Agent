@@ -155,6 +155,13 @@ function App() {
                  value={searchTerm}
                  ref={searchRef}
                  onChange={(e) => setSearchTerm(e.target.value)}
+                 onKeyDown={event => {
+                   if (event.key === 'Escape' && !event.nativeEvent.isComposing && searchTerm) {
+                     event.preventDefault()
+                     event.stopPropagation()
+                     setSearchTerm('')
+                   }
+                 }}
                  id="global-search"
               />
               {searchTerm && <button type="button" className="absolute right-2 top-2 text-muted-foreground hover:text-foreground" aria-label={t.clearSearch} onClick={() => { setSearchTerm(''); searchRef.current?.focus() }}><X className="h-5 w-5" /></button>}
