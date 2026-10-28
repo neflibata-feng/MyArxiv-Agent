@@ -4,6 +4,8 @@ import { Translation } from '@/i18n/locales'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FileText, ExternalLink } from 'lucide-react'
 import { RepoFileTree } from '@/components/RepoFileTree'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { MarkdownViewer } from '@/components/MarkdownViewer'
 
 interface ArchiveViewProps {
@@ -15,6 +17,7 @@ interface ArchiveViewProps {
 
 export function ArchiveView({ client, t, searchTerm, config }: ArchiveViewProps) {
    const rootPath = useMemo(() => config?.paths?.papers_dir || 'Papers', [config])
+   const [showFiles, setShowFiles] = useState(false)
    const [activeFile, setActiveFile] = useState<RepoFile | null>(null)
    const [content, setContent] = useState<string>('')
    const [loading, setLoading] = useState(false)
@@ -53,15 +56,15 @@ export function ArchiveView({ client, t, searchTerm, config }: ArchiveViewProps)
    }
 
   return (
-     <div className="flex h-full">
-            <aside className="w-72 border-r bg-muted/10 overflow-y-auto hidden md:block">
-               <div className="p-4 font-semibold border-b bg-muted/20">{t.archive}</div>
+     <div className="flex h-full relative">
+            <aside className={cn("w-72 border-r bg-card overflow-y-auto md:block", showFiles ? "absolute inset-y-0 left-0 z-20 max-w-[80%] md:static md:z-auto md:max-w-none" : "hidden")}>
+               <div className="p-4 font-semibold border-b bg-muted/20 flex items-center justify-between">{t.archive}<Button className="md:hidden" variant="ghost" size="sm" onClick={() => setShowFiles(false)}>{t.closeFiles}</Button></div>
                <div className="p-2">
                   <RepoFileTree
                      client={client}
                      rootPath={rootPath}
                      selectedPath={activeFile?.path}
-                     onSelectFile={loadFile}
+                     onSelectFile={file => { setShowFiles(false); loadFile(file) }}
                      searchTerm={searchTerm}
                      fileFilter={(f) => f.type === 'file' && f.name.toLowerCase().endsWith('.md')}
                      loadingLabel={t.loading}
@@ -73,6 +76,7 @@ export function ArchiveView({ client, t, searchTerm, config }: ArchiveViewProps)
 
             <div className="flex-1 overflow-hidden">
                <div className="h-full overflow-y-auto p-6">
+                  <Button className="md:hidden mb-4" variant="outline" onClick={() => setShowFiles(true)} aria-expanded={showFiles}>{t.openFiles}</Button>
                   {!activeFile && (
                      <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                         <FileText className="h-16 w-16 mb-4 opacity-20" />
