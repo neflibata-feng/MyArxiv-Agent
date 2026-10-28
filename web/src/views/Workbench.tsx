@@ -16,6 +16,7 @@ interface WorkbenchViewProps {
 }
 
 export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewProps) {
+  const [showFiles, setShowFiles] = useState(false)
   const [activeFile, setActiveFile] = useState<RepoFile | null>(null)
   const [content, setContent] = useState("")
   const [viewMode, setViewMode] = useState<'split' | 'single'>('single')
@@ -76,15 +77,16 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
   }
 
   return (
-    <div className="flex h-full">
-       <div className="w-64 border-r bg-muted/10 overflow-y-auto flex flex-col">
-          <div className="p-4 font-semibold border-b bg-muted/20">{t.workbench}</div>
+    <div className="flex h-full relative">
+       <Button className="md:hidden absolute bottom-3 right-3 z-10" variant="outline" onClick={() => setShowFiles(true)} aria-expanded={showFiles}>{t.openNotes}</Button>
+       <div className={cn("w-64 border-r bg-card overflow-y-auto flex-col md:flex", showFiles ? "absolute inset-y-0 left-0 z-20 max-w-[80%] flex md:static md:z-auto md:max-w-none" : "hidden")}>
+          <div className="p-4 font-semibold border-b bg-muted/20 flex items-center justify-between">{t.workbench}<Button className="md:hidden" variant="ghost" size="sm" onClick={() => setShowFiles(false)}>{t.closeNotes}</Button></div>
                <div className="flex-1 p-2">
                   <RepoFileTree
                      client={client}
                      rootPath={rootPath}
                      selectedPath={activeFile?.path}
-                     onSelectFile={loadFile}
+                     onSelectFile={file => { setShowFiles(false); loadFile(file) }}
                      searchTerm={searchTerm}
                      fileFilter={(f) => f.type === 'file' && f.name.toLowerCase().endsWith('.md')}
                      loadingLabel={t.loading}
