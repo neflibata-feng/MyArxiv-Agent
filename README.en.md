@@ -26,7 +26,7 @@ Scheduled fetching and automatic archiving are not configured in this template. 
 
 Run locally with `cd web`, `npm ci`, and `npm run dev`. Sign in with your own `owner/repository` and a fine-grained GitHub PAT limited to that repository with `Contents: Read and write`. The browser stores the PAT locally; use a trusted device and never commit the token. The client writes directly to `main`, so protected branch rules may prevent saves.
 
-No GitHub Actions workflows are included. You can use the local development server or run `npm run build` and publish `web/dist/` with a static hosting service.
+The project brand site lives on the `codex/brand-site` branch and is deployed by a workflow on the main branch that runs only in the original repository. To use your own web app, run the local development server or run `npm run build` and publish `web/dist/` with a static hosting service.
 
 ## Project layout
 

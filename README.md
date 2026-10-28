@@ -54,7 +54,7 @@ npm run dev
 
 登录时输入自己的 `用户名/仓库名` 和 GitHub fine-grained PAT。给令牌限定目标仓库并授予 `Contents: Read and write`；PAT 保存在浏览器本地，请使用可信设备，不要提交令牌。网页直接修改仓库文件，因此需要对应分支的写入权限；受保护分支可能拒绝直接保存。网页默认访问 `main` 分支。
 
-本仓库不附带 GitHub Actions 工作流。网页可通过本地开发服务器使用，也可以在自己的仓库中运行 `npm run build`，将 `web/dist/` 发布到支持静态文件的托管服务。
+本项目的品牌展示页保存在 `codex/brand-site` 分支，由主分支中的工作流发布；该工作流仅在原项目仓库运行，不会发布使用者的网页应用。你可以通过本地开发服务器使用网页应用，也可以运行 `npm run build`，将 `web/dist/` 发布到支持静态文件的托管服务。
 
 ## 项目结构
 
@@ -62,7 +62,7 @@ npm run dev
 - `config.yaml`：查询、路径、格式和存储配置。
 - `Inbox.md`、`Contents.md`：收件箱与归档索引的空白起点。
 - `Papers/`、`Notes/`：论文元数据与阅读笔记；`data/arxiv.db` 在初始化时创建。
-- `web/`：网页客户端。
+- `web/`：网页客户端；`.github/workflows/`：本项目品牌展示页的部署工作流。
 - `agent/skills/`：可复用的研究和写作技能，目前没有与抓取流程自动集成。
 
 ## 参与贡献
