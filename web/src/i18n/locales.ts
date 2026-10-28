@@ -43,6 +43,7 @@ export const I18N = {
     syncSuccess: "同步完成！",
     syncFail: "同步失败，未同步的修改仍保留。请检查权限和网络后重试。",
     inboxLoadFailed: "收件箱加载失败，请检查权限和网络后刷新。",
+    collapseFolders: "收起文件夹",
     copyright: "©2026, 由neflibata-feng开发并开源",
     preview: "预览",
     source: "源码",
@@ -62,7 +63,6 @@ export const I18N = {
     singleView: "退出编辑",
     openFiles: "选择档案文件",
     closeFiles: "关闭文件列表",
-    collapseFolders: "收起文件夹",
     folder: "文件夹",
     file: "文件",
 
@@ -132,6 +132,7 @@ export const I18N = {
     syncSuccess: "Sync Completed!",
     syncFail: "Sync failed. Your changes are kept; check access and network and retry.",
     inboxLoadFailed: "Failed to load inbox. Check access and network, then refresh.",
+    collapseFolders: "Collapse folders",
     copyright: "©2026, Developed by neflibata-feng",
     preview: "Preview",
     source: "Source",
@@ -151,7 +152,6 @@ export const I18N = {
     singleView: "Single",
     openFiles: "Choose archive file",
     closeFiles: "Close file list",
-    collapseFolders: "Collapse folders",
     folder: "Folder",
     file: "File",
 
