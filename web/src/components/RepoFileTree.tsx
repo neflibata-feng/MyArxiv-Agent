@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Folder, FileText, ChevronDown, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -45,6 +45,15 @@ export function RepoFileTree({
   const [errorByPath, setErrorByPath] = useState<Record<string, boolean>>({})
 
   const normalizedSearch = (searchTerm || '').trim().toLowerCase()
+  const fileIndexes = useMemo(() => new Map(Object.entries(childrenByPath).map(([path, children]) => [
+    path,
+    new Fuse(children.filter(child => child.type === 'file'), {
+      includeScore: true,
+      threshold: 0.35,
+      ignoreLocation: true,
+      keys: ['name'],
+    }),
+  ])), [childrenByPath])
 
   const loadDir = async (path: string) => {
     setLoadingByPath(prev => ({ ...prev, [path]: true }))
@@ -104,14 +113,7 @@ export function RepoFileTree({
     const visibleChildren = (() => {
       if (!normalizedSearch) return children
       const dirs = children.filter(c => c.type === 'dir')
-      const files = children.filter(c => c.type === 'file')
-      const fuse = new Fuse(files, {
-        includeScore: true,
-        threshold: 0.35,
-        ignoreLocation: true,
-        keys: ['name'],
-      })
-      const matchedFiles = fuse.search(normalizedSearch).map(r => r.item)
+      const matchedFiles = fileIndexes.get(path)?.search(normalizedSearch).map(r => r.item) || []
       return [...dirs, ...matchedFiles]
     })()
 
