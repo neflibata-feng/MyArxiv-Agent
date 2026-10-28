@@ -57,6 +57,8 @@
 
 ## 页面展示
 
+收件箱可从 arXiv 论文卡片直接打开 PDF。
+
 - ![](https://raw.githubusercontent.com/neflibata-feng/MyArxiv-Agent/main/assets/5.png)
 - ![](https://raw.githubusercontent.com/neflibata-feng/MyArxiv-Agent/main/assets/4.png)
 - ![](https://raw.githubusercontent.com/neflibata-feng/MyArxiv-Agent/main/assets/3.png)

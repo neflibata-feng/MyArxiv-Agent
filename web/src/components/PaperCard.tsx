@@ -27,6 +27,16 @@ export function PaperCard({ paper, onToggle, onDelete, t }: PaperCardProps) {
     }
   }
   const isUpdate = paper.type === 'update'
+  const pdfUrl = (() => {
+    try {
+      if (!paper.link) return null
+      const url = new URL(paper.link)
+      if (url.protocol !== 'https:' || !['arxiv.org', 'www.arxiv.org'].includes(url.hostname) || !url.pathname.startsWith('/abs/') || url.pathname === '/abs/') return null
+      return `https://arxiv.org/pdf/${url.pathname.slice('/abs/'.length)}`
+    } catch {
+      return null
+    }
+  })()
 
   return (
     <Card className={cn(
@@ -109,6 +119,7 @@ export function PaperCard({ paper, onToggle, onDelete, t }: PaperCardProps) {
                </Button>
             )}
          </div>
+         {pdfUrl && <Button variant="outline" size="sm" className="h-7 text-xs" asChild><a href={pdfUrl} target="_blank" rel="noopener noreferrer">{t.openPdf}</a></Button>}
          <div className="flex items-center gap-2">
            <span className="text-xs text-muted-foreground" role="status">{copyStatus}</span>
            {paper.link && <Button variant="ghost" size="sm" onClick={copyLink} aria-label={t.copyLink}><Copy className="h-3 w-3 mr-1" />{t.copyLink}</Button>}
