@@ -69,10 +69,8 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
      return deleted + modified
   }, [papers, initialPapers])
 
-  // Filter by Search
-  const filteredPapers = useMemo(() => {
-    if (!searchTerm) return papers
-    const fuse = new Fuse(papers, {
+  // Reuse the index while the search query changes.
+  const searchIndex = useMemo(() => new Fuse(papers, {
       includeScore: true,
       threshold: 0.35,
       ignoreLocation: true,
@@ -85,10 +83,12 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
         { name: 'category', weight: 0.2 },
         { name: 'group', weight: 0.2 },
       ],
-    })
+    }), [papers])
 
-    return fuse.search(searchTerm).map(r => r.item)
-  }, [papers, searchTerm])
+  const filteredPapers = useMemo(() => {
+    if (!searchTerm) return papers
+    return searchIndex.search(searchTerm).map(r => r.item)
+  }, [papers, searchIndex, searchTerm])
 
   const groups = useMemo(() => {
     const map = new Map<string, Paper[]>()
