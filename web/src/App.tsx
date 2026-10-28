@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { 
   BookOpen, Home, Calendar, Archive, Monitor, Settings,
   LogOut, Search
@@ -30,6 +30,7 @@ function App() {
   const [client, setClient] = useState<GithubClient | null>(null)
   const [activeTab, setActiveTab] = useState<Tab>('home')
   const [searchTerm, setSearchTerm] = useState("")
+  const searchRef = useRef<HTMLInputElement>(null)
   const [config, setConfig] = useState<any>({})
 
   // Load repo config.yaml
@@ -47,6 +48,21 @@ function App() {
         }
       })
       .catch(() => setConfig({}))
+  }, [client])
+
+  useEffect(() => {
+    if (!client) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey ||
+          target?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName || '')) return
+      const input = searchRef.current
+      if (!input || input.getClientRects().length === 0) return
+      event.preventDefault()
+      input.focus()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
   }, [client])
 
   // Theme Effect
@@ -136,6 +152,7 @@ function App() {
                  className="h-9 w-40 lg:w-64 rounded-md border border-input bg-background pl-9 pr-4 text-sm"
                  placeholder={t.searchPlaceholder}
                  value={searchTerm}
+                 ref={searchRef}
                  onChange={(e) => setSearchTerm(e.target.value)}
               />
            </div>
