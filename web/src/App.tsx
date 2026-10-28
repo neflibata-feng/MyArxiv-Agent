@@ -150,13 +150,14 @@ function App() {
            <div className={cn("relative", mobileSearchOpen ? "flex-1 sm:flex-none" : "hidden sm:block")}>
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <input 
-                 className="h-9 w-full sm:w-40 lg:w-64 rounded-md border border-input bg-background pl-9 pr-4 text-sm"
+                 className="h-9 w-full sm:w-40 lg:w-64 rounded-md border border-input bg-background pl-9 pr-9 text-sm"
                  placeholder={t.searchPlaceholder}
                  value={searchTerm}
                  ref={searchRef}
                  onChange={(e) => setSearchTerm(e.target.value)}
                  id="global-search"
               />
+              {searchTerm && <button type="button" className="absolute right-2 top-2 text-muted-foreground hover:text-foreground" aria-label={t.clearSearch} onClick={() => { setSearchTerm(''); searchRef.current?.focus() }}><X className="h-5 w-5" /></button>}
            </div>
            
            <Button variant="ghost" size="icon" className="sm:hidden" aria-label={mobileSearchOpen ? t.closeSearch : t.search} onClick={() => {
