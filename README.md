@@ -20,7 +20,7 @@
    cd 你的仓库名
    ```
 
-有隐私需求时可以选择私有仓库。GitHub Free 的公开仓库支持 GitHub Pages；私有仓库使用 Pages 需要 GitHub Pro、Team 或 Enterprise 等支持相应功能的套餐，具体以 [GitHub Pages 文档](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages)为准。**Pages 网站可能公开可访问**，不要把私有论文、笔记、数据库或凭据放进网页发布目录。
+有隐私需求时可以选择私有仓库。GitHub Free 的公开仓库支持 GitHub Pages；私有仓库使用 Pages 需要 GitHub Pro、Team 或 Enterprise 等支持相应功能的套餐，具体以 [GitHub Pages 文档](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages)为准。私有仓库也可以部署网页：网页通过你的个人访问令牌连接仓库，论文和笔记仍由 GitHub 仓库权限控制。请妥善保管令牌，并在可信设备上使用。
 
 ### 2. 安装依赖
 
