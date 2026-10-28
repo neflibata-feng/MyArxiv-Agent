@@ -155,6 +155,13 @@ function App() {
                  value={searchTerm}
                  ref={searchRef}
                  onChange={(e) => setSearchTerm(e.target.value)}
+                 onKeyDown={event => {
+                   if (event.key === 'Escape' && !event.nativeEvent.isComposing && searchTerm) {
+                     event.preventDefault()
+                     event.stopPropagation()
+                     setSearchTerm('')
+                   }
+                 }}
                  id="global-search"
               />
            </div>
