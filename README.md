@@ -127,6 +127,18 @@ Windows 用户也可以在文件管理器中复制文件后再提交。模板默
 
 网页会把令牌保存在浏览器本地，请只在可信设备上使用；不要把令牌写入文件或提交。
 
+## GitHub Actions 研究助手
+
+研究助手在 GitHub Actions 中读取仓库中的论文数据库及笔记，支持论文检索、整理阅读笔记和生成带来源的文献综述草稿。它只读取仓库，结果展示在该次运行的 Summary，不会自动提交论文或笔记。
+
+1. 确保仓库已按上文初始化并提交 `data/arxiv.db`；如需结合笔记，请将笔记保存在配置的 `paths.notes_dir` 中。
+2. 在仓库 **Settings → Secrets and variables → Actions** 新建 repository secret，名称为 `key`，值为模型服务的 API key。不要把密钥放入文件、问题或提交记录。
+3. 在 **Actions → Research Agent → Run workflow** 中选择场景并填写研究问题。可选填写逗号分隔的 arXiv ID（最多 10 篇，需在仓库数据库中），设置本次 token 预算后运行。在运行页面的 Summary 查看结果；GitHub 要求手动触发的工作流存在于默认分支。
+
+工作流使用 `deepseek-flash` 和默认 `https://api.deepseek.com` 地址；可在 Actions variables 中设置 `DEEPSEEK_BASE_URL` 为兼容服务的 HTTPS 地址，并确认该服务支持此模型名。模型调用会发送问题及检索到的论文元数据、笔记内容；使用 arXiv 搜索时，查询词也会发送给 arXiv。请根据资料敏感程度决定是否使用。结果附有本次工具检索到的 arXiv 来源清单，并提示回答中未检索到的 arXiv 链接；这不验证结论、其他类型的引用或完整性，仍需人工核验。技能目录中的技能尚未自动接入。
+
+每次运行默认预算 100 万 token，可在运行时降低，使用服务返回的用量累计，并为每次请求预留输入和输出预算；服务没有报告用量时停止。该限制依赖服务端用量统计和分词方式，无法约束错误计费。
+
 ## 项目结构
 
 - `scripts/`：抓取、收件箱处理和 SQLite 初始化脚本。
@@ -134,7 +146,7 @@ Windows 用户也可以在文件管理器中复制文件后再提交。模板默
 - `Inbox.md`、`Contents.md`：收件箱与归档索引的空白起点。
 - `Papers/`、`Notes/`：论文元数据与阅读笔记；`data/arxiv.db` 在初始化时创建。
 - `web/`：网页客户端；`.github/workflows/`：本项目品牌展示页的部署工作流；`.github/workflow-templates/`：默认关闭的可选自动化模板。
-- `agent/skills/`：可复用的研究和写作技能，目前没有与抓取流程自动集成。
+- `agent/`：研究助手的运行代码与可复用技能；技能尚未自动接入。
 
 ## 参与贡献
 
