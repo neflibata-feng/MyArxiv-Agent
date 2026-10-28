@@ -69,6 +69,16 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
      return deleted + modified
   }, [papers, initialPapers])
 
+  useEffect(() => {
+    if (!changesCount) return
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [changesCount])
+
   // Filter by Search
   const filteredPapers = useMemo(() => {
     if (!searchTerm) return papers
