@@ -12,6 +12,8 @@
   <strong>中文</strong> · <a href="README.en.md">English</a>
 </p>
 
+网页导航和图标按钮提供无障碍名称。
+
 ## 关于本仓库
 
 - 这是一个由 **neflibata-feng** 个人维护和自用的 arXiv 论文知识空间，用于自动整理 AI Agent 相关论文、筛选阅读内容并持续撰写研究笔记。
