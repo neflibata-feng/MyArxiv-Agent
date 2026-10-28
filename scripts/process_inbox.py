@@ -90,17 +90,20 @@ def create_note_template(config, notes_dir: str, category, title, link, date_str
     if os.path.exists(note_path):
         return note_path
         
+    default_sections = [
+        "## 1. 摘要",
+        "## 2. 关键成果",
+        "## 3. 核心技术",
+        "## 4. 实验及其结果",
+        "## 5. 我的观点",
+    ]
     sections = get_config_value(
-        config,
-        "archive.notes.template.sections",
-        [
-            "## 1. 摘要",
-            "## 2. 关键成果",
-            "## 3. 核心技术",
-            "## 4. 实验及其结果",
-            "## 5. 我的观点",
-        ],
+        config, "archive.notes.template.sections", default_sections
     )
+    # YAML null (including a blank sections key) uses the default template.
+    # Keep an explicit empty list so users can omit all section headings.
+    if sections is None:
+        sections = default_sections
 
     title_prefix = get_config_value(config, "archive.notes.template.title_prefix", "# ")
     title_line = f"{title_prefix}{title}" if str(title_prefix) else str(title)
