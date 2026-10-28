@@ -15,6 +15,7 @@ export interface RepoFileTreeProps {
   loadingLabel?: string
   errorLabel?: string
   retryLabel?: string
+  collapseAllLabel?: string
 }
 
 function sortNodes(a: RepoFile, b: RepoFile) {
@@ -38,6 +39,7 @@ export function RepoFileTree({
   loadingLabel,
   errorLabel,
   retryLabel,
+  collapseAllLabel,
 }: RepoFileTreeProps) {
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set([rootPath]))
   const [childrenByPath, setChildrenByPath] = useState<Record<string, RepoFile[]>>({})
@@ -165,6 +167,7 @@ export function RepoFileTree({
 
   return (
     <div className="w-full">
+      <Button variant="ghost" size="sm" disabled={expanded.size <= (expanded.has(rootPath) ? 1 : 0)} onClick={() => setExpanded(new Set([rootPath]))}>{collapseAllLabel || "Collapse folders"}</Button>
       {renderNode(rootPath, 0)}
     </div>
   )

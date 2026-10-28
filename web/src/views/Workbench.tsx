@@ -123,6 +123,7 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
                      loadingLabel={t.loading}
                      errorLabel={t.directoryLoadFailed}
                      retryLabel={t.retry}
+                     collapseAllLabel={t.collapseFolders}
                   />
                </div>
        </div>

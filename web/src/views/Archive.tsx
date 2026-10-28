@@ -70,6 +70,7 @@ export function ArchiveView({ client, t, searchTerm, config }: ArchiveViewProps)
                      loadingLabel={t.loading}
                      errorLabel={t.directoryLoadFailed}
                      retryLabel={t.retry}
+                     collapseAllLabel={t.collapseFolders}
                   />
                </div>
             </aside>
