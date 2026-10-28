@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { GithubClient, RepoFile } from '@/lib/github'
 import { Translation } from '@/i18n/locales'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,26 +18,37 @@ export function ArchiveView({ client, t, searchTerm, config }: ArchiveViewProps)
    const [activeFile, setActiveFile] = useState<RepoFile | null>(null)
    const [content, setContent] = useState<string>('')
    const [loading, setLoading] = useState(false)
+   const [error, setError] = useState(false)
+   const requestId = useRef(0)
 
    const isMarkdown = (path?: string | null) => !!path && path.toLowerCase().endsWith('.md')
 
    useEffect(() => {
+      requestId.current += 1
+      setLoading(false)
+      setError(false)
       setActiveFile(null)
       setContent('')
    }, [rootPath])
 
    const loadFile = async (file: RepoFile) => {
+      const id = ++requestId.current
       setActiveFile(file)
+      setContent('')
+      setError(false)
       if (!isMarkdown(file.path)) {
+         setLoading(false)
          setContent('')
          return
       }
       setLoading(true)
       try {
          const res = await client.getFileContent(file.path)
-         setContent(res.content)
+         if (id === requestId.current) setContent(res.content)
+      } catch {
+         if (id === requestId.current) setError(true)
       } finally {
-         setLoading(false)
+         if (id === requestId.current) setLoading(false)
       }
    }
 
@@ -92,7 +103,8 @@ export function ArchiveView({ client, t, searchTerm, config }: ArchiveViewProps)
                               </div>
                            )}
 
-                           {isMarkdown(activeFile.path) && (
+                           {error && <div role="alert">{t.archiveLoadFailed}</div>}
+                           {isMarkdown(activeFile.path) && !error && (
                               <MarkdownViewer
                                 content={loading ? t.loading : content || t.emptyFile}
                                 resolveAssetUrl={(url) => client.resolveRawUrl(url, activeFile.path)}
