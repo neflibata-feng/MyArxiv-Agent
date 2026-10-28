@@ -160,7 +160,7 @@ function App() {
                  className="h-9 w-full sm:w-40 lg:w-64 rounded-md border border-input bg-background pl-9 pr-9 text-sm"
                  placeholder={t.searchPlaceholder}
                  value={searchTerm}
-                 ref={searchRef}
+                 ref={searchRef} aria-label={t.search}
                  onChange={(e) => setSearchTerm(e.target.value)}
                  onKeyDown={event => {
                    if (event.key === 'Escape' && !event.nativeEvent.isComposing && searchTerm) {
@@ -182,11 +182,11 @@ function App() {
              {mobileSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
            </Button>
 
-           <Button variant="ghost" size="icon" onClick={() => setActiveTab('settings')} className={cn(activeTab==='settings' && "bg-accent")}>
+           <Button variant="ghost" size="icon" aria-label={t.settings} onClick={() => setActiveTab('settings')} className={cn(activeTab==='settings' && "bg-accent")}>
              <Settings className="h-5 w-5" />
            </Button>
            
-           <Button variant="ghost" size="icon" onClick={handleLogout}>
+           <Button variant="ghost" size="icon" aria-label={t.logout} onClick={handleLogout}>
              <LogOut className="h-5 w-5" />
            </Button>
         </div>
@@ -219,6 +219,8 @@ function NavButton({ icon, label, active, onClick }: any) {
       variant={active ? "secondary" : "ghost"} 
       size="sm" 
       onClick={onClick}
+      aria-label={label}
+      aria-current={active ? "page" : undefined}
       className={cn("gap-2 h-9", active && "bg-secondary")}
     >
       {React.cloneElement(icon, { className: "h-4 w-4" })}
