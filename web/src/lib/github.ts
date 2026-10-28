@@ -42,6 +42,7 @@ export class GithubClient {
   private branch: string;
   private cache = new Map<string, { data: any, timestamp: number }>();
   private cacheTTL = 60 * 1000; // 1 minute cache
+  private cacheLimit = 200;
   
   constructor(token: string, owner: string, repo: string, branch: string = "main") {
     this.octokit = new Octokit({ auth: token });
@@ -85,13 +86,21 @@ export class GithubClient {
   private getFromCache<T>(key: string): T | null {
     const item = this.cache.get(key);
     if (item && Date.now() - item.timestamp < this.cacheTTL) {
+      this.cache.delete(key);
+      this.cache.set(key, item);
       return item.data as T;
     }
+    if (item) this.cache.delete(key);
     return null;
   }
 
   private setCache(key: string, data: any) {
+    this.cache.delete(key);
     this.cache.set(key, { data, timestamp: Date.now() });
+    if (this.cache.size > this.cacheLimit) {
+      const oldest = this.cache.keys().next().value;
+      if (oldest !== undefined) this.cache.delete(oldest);
+    }
   }
 
   async getUser() {
