@@ -120,6 +120,8 @@
 - 常见可配置项：关注分类与关键词、抓取数量、SQLite 路径、Inbox 最大条目数与字节数、摘要截断长度、Inbox/Contents 生成模板、归档目录结构等。
 - GitHub Actions 默认会直接使用该文件，无需额外改动。
 
+生成收件箱时会复用已格式化条目并统计日期分组，减少容量裁剪时的重复计算。
+
 > `storage.sqlite.path` 用于设置数据库路径；`inbox.render.max_items` 与 `inbox.render.max_bytes` 用于限制 `Inbox.md` 的渲染容量。数据库保存完整状态，Inbox 仅作为可编辑视图。
 
 收件箱时间线支持查看全部日期；在移动设备上可通过日期选择器切换分组。
