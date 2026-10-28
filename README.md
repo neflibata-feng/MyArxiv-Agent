@@ -111,11 +111,10 @@ Windows 用户也可以在文件管理器中复制文件后再提交。模板默
 
 ### 1. 发布到 GitHub Pages
 
-1. 确保已经按上文复制并提交 `deploy-web.yml`。为避免 GitHub 对 `GITHUB_TOKEN` 推送事件的限制，创建只授权此仓库、具有 **Contents: Read and write** 权限的 fine-grained PAT，在仓库 **Settings → Secrets and variables → Actions → New repository secret** 中保存为 `PAGES_DEPLOY_TOKEN`。给令牌设置合理有效期。
-2. 编辑 `.github/workflows/deploy-web.yml`，在 `JamesIves/github-pages-deploy-action@v4` 步骤的 `with:` 下加入 `token: ${{ secrets.PAGES_DEPLOY_TOKEN }}`，并提交修改。部署令牌只保存在 Actions secret 中，不要写入文件或提交记录。
-3. 打开 **Actions → Deploy Web App → Run workflow**，选择 `main` 并运行。成功后，工作流会构建 `web/`，并将结果推送到仓库的 `gh-pages` 分支。若失败，打开该次运行查看日志，并检查写入权限。
-4. 打开 **Settings → Pages**，在 **Build and deployment → Source** 选择 **Deploy from a branch**；分支选择 `gh-pages`、目录选择 `/ (root)`，保存并等待发布完成。
-5. 打开 Pages 显示的网址，通常是 `https://你的用户名.github.io/你的仓库名/`。后续 `main` 中 `web/` 变化会触发该工作流，也可在 Actions 页面手动重新运行。
+1. 确保已经按上文复制并提交 `deploy-web.yml`。
+2. 打开 **Actions → Deploy Web App → Run workflow**，选择 `main` 并运行。成功后，工作流会构建 `web/`，并将结果推送到仓库的 `gh-pages` 分支。若失败，打开该次运行查看日志，并检查写入权限。
+3. 打开 **Settings → Pages**，在 **Build and deployment → Source** 选择 **Deploy from a branch**；分支选择 `gh-pages`、目录选择 `/ (root)`，保存并等待发布完成。
+4. 打开 Pages 显示的网址，通常是 `https://你的用户名.github.io/你的仓库名/`。后续 `main` 中 `web/` 变化会触发该工作流，也可在 Actions 页面手动重新运行。
 
 品牌展示页的工作流只服务于原项目，不会替你发布个人网页；请使用上述 `deploy-web.yml` 模板。私有仓库的 Pages 可用性取决于账户套餐，网页本身的可见性也应单独确认。
 
