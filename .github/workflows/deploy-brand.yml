@@ -1,7 +1,7 @@
 name: Deploy brand site
 on:
   push:
-    branches: [main]
+    branches: [brand-site]
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,7 +22,11 @@ jobs:
         with:
           ref: brand-site
       - name: Prepare site
-        run: mkdir -p _site && cp index.html _site/index.html
+        run: |
+          mkdir -p _site
+          cp index.html _site/index.html
+          if [ -f CNAME ]; then cp CNAME _site/; fi
+          if [ -d site-assets ]; then cp -R site-assets _site/; fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
