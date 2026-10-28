@@ -27,6 +27,7 @@ interface InboxViewProps {
 }
 
 export function InboxView({ client, t, searchTerm }: InboxViewProps) {
+  const [onlySelected, setOnlySelected] = useState(false)
   const [papers, setPapers] = useState<Paper[]>([])
   const [initialPapers, setInitialPapers] = useState<Paper[]>([])
   const [originalContent, setOriginalContent] = useState<string>("")
@@ -105,15 +106,18 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
   const groups = useMemo(() => {
     const map = new Map<string, Paper[]>()
     const order: string[] = []
-    filteredPapers.forEach(p => {
+    filteredPapers.filter(p => !onlySelected || p.selected).forEach(p => {
        const g = p.group || "Other"
        if (!map.has(g)) { map.set(g, []); order.push(g) }
        map.get(g)?.push(p)
     })
     return order.map(g => ({ name: g, papers: map.get(g)||[] }))
-  }, [filteredPapers])
+  }, [filteredPapers, onlySelected])
 
-  const displayed = useMemo(() => activeGroup ? filteredPapers.filter(p => (p.group||"Other") === activeGroup) : filteredPapers, [filteredPapers, activeGroup])
+  const displayed = useMemo(() => {
+    const grouped = activeGroup ? filteredPapers.filter(p => (p.group||"Other") === activeGroup) : filteredPapers
+    return onlySelected ? grouped.filter(p => p.selected) : grouped
+  }, [filteredPapers, activeGroup, onlySelected])
 
   return (
     <div className="flex h-full">
@@ -169,6 +173,7 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
                 </Button>
              </div>
           </div>
+          <label className="px-4 py-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={onlySelected} onChange={event => setOnlySelected(event.target.checked)} />{t.onlySelected}</label>
           <div className="p-3 border-b md:hidden">
             <label className="sr-only" htmlFor="inbox-group">{t.timeline}</label>
             <select id="inbox-group" className="w-full rounded-md border bg-background p-2 text-sm" value={activeGroup ?? ""} onChange={e => setActiveGroup(e.target.value || null)}>
