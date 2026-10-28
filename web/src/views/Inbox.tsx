@@ -139,6 +139,7 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
              <span className="text-sm font-medium flex items-center gap-2">
                 <Calendar className="h-4 w-4" /> {t.inbox}
                 {searchTerm && <Badge variant="secondary">{t.found} {filteredPapers.length}</Badge>}
+                <Badge variant="outline">{t.showing} {displayed.length}/{papers.length}</Badge>
              </span>
              <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" disabled={displayed.length === 0 || loading || syncing} onClick={() => {
@@ -175,7 +176,7 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
                  }}
                />
              ))}
-             {displayed.length === 0 && <div className="text-center text-muted-foreground mt-10">{t.noPapers}</div>}
+             {displayed.length === 0 && <div className="text-center text-muted-foreground mt-10">{papers.length > 0 ? t.noMatchingPapers : t.noPapers}</div>}
           </div>
        </div>
     </div>
