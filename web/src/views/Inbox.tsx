@@ -10,6 +10,16 @@ import Fuse from 'fuse.js'
 
 const paperKey = (paper: Paper) => paper.sourceLine ?? paper.id
 
+function UnsavedWarning({ dirty }: { dirty: boolean }) {
+  useEffect(() => {
+    if (!dirty) return
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [dirty])
+  return null
+}
+
 interface InboxViewProps {
   client: GithubClient
   t: Translation
@@ -107,6 +117,7 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
 
   return (
     <div className="flex h-full">
+       <UnsavedWarning dirty={changesCount > 0} />
        <aside className="w-64 border-r overflow-y-auto hidden md:block bg-muted/10 p-4">
           <h2 className="font-semibold mb-2 px-2 flex items-center gap-2"><Calendar className="h-4 w-4"/> {t.timeline}</h2>
           <div className="space-y-1">
