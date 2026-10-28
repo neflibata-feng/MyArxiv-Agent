@@ -549,6 +549,8 @@ def inbox_changes(
         raise ValueError("Inbox 中存在无法识别的论文条目，已停止同步")
 
     current = {item["item_key"]: item for item in parsed}
+    if len(current) != len(parsed):
+        raise ValueError("Inbox 中存在重复的论文条目，已停止同步")
     visible = connection.execute(
         """
         SELECT
