@@ -65,6 +65,8 @@ export function ArchiveView({ client, t, searchTerm, config }: ArchiveViewProps)
                      searchTerm={searchTerm}
                      fileFilter={(f) => f.type === 'file' && f.name.toLowerCase().endsWith('.md')}
                      loadingLabel={t.loading}
+                     errorLabel={t.directoryLoadFailed}
+                     retryLabel={t.retry}
                   />
                </div>
             </aside>

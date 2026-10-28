@@ -13,6 +13,8 @@ export interface RepoFileTreeProps {
   searchTerm?: string
   fileFilter?: (file: RepoFile) => boolean
   loadingLabel?: string
+  errorLabel?: string
+  retryLabel?: string
 }
 
 function sortNodes(a: RepoFile, b: RepoFile) {
@@ -34,18 +36,24 @@ export function RepoFileTree({
   searchTerm,
   fileFilter,
   loadingLabel,
+  errorLabel,
+  retryLabel,
 }: RepoFileTreeProps) {
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set([rootPath]))
   const [childrenByPath, setChildrenByPath] = useState<Record<string, RepoFile[]>>({})
   const [loadingByPath, setLoadingByPath] = useState<Record<string, boolean>>({})
+  const [errorByPath, setErrorByPath] = useState<Record<string, boolean>>({})
 
   const normalizedSearch = (searchTerm || '').trim().toLowerCase()
 
   const loadDir = async (path: string) => {
     setLoadingByPath(prev => ({ ...prev, [path]: true }))
+    setErrorByPath(prev => ({ ...prev, [path]: false }))
     try {
       const res = await client.getDirContent(path)
       setChildrenByPath(prev => ({ ...prev, [path]: [...res].sort(sortNodes) }))
+    } catch {
+      setErrorByPath(prev => ({ ...prev, [path]: true }))
     } finally {
       setLoadingByPath(prev => ({ ...prev, [path]: false }))
     }
@@ -55,6 +63,7 @@ export function RepoFileTree({
     setExpanded(new Set([rootPath]))
     setChildrenByPath({})
     setLoadingByPath({})
+    setErrorByPath({})
     loadDir(rootPath)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client, rootPath])
@@ -111,6 +120,12 @@ export function RepoFileTree({
         {isLoading && (
           <div className={cn('text-xs text-muted-foreground px-2 py-1', indentClass(depth))}>
             {loadingLabel || 'Loading...'}
+          </div>
+        )}
+
+        {errorByPath[path] && (
+          <div role="alert" className={cn("text-xs text-destructive px-2 py-1", indentClass(depth))}>
+            {errorLabel || "Failed to load directory."} <Button variant="ghost" size="sm" onClick={() => loadDir(path)}>{retryLabel || "Retry"}</Button>
           </div>
         )}
 
