@@ -20,7 +20,7 @@ An open-source template for fetching arXiv papers, reviewing an inbox, archiving
 4. Run `python scripts/migrate_to_sqlite.py` to initialize the database. The command imports existing Inbox and Papers content; the new template starts empty. Back up existing data before migrating another repository.
 5. Run `python scripts/fetch_arxiv.py`. Check papers to archive or remove unwanted entries in `Inbox.md`, then run `python scripts/process_inbox.py`. Results appear in `Papers/`, `Notes/`, and `Contents.md`. Keep `data/arxiv.db` with these files: SQLite holds the complete state and Inbox is only a limited view.
 
-Scheduled fetching and automatic archiving are not configured in this template. Configure scheduling, write permissions, and branch protection in your own repository if needed. Branches requiring pull requests reject direct pushes. Sync your repository before fetching, archiving, or editing through the web client.
+Optional fetching, archiving, and web app deployment workflow templates are stored in `.github/workflow-templates/` and do not run by default. In your own repository, review and copy the workflows you need into `.github/workflows/`, then adjust the default branch, schedule, permissions, and branch protection before committing. The fetch and archive templates push directly to `main`; branches requiring pull requests reject direct pushes, so adapt them to a pull-request workflow or adjust the rules. Enable repository content write permissions and run a manual check. Sync your repository before fetching, archiving, or editing through the web client.
 
 ## Web client
 
@@ -38,4 +38,4 @@ Please open an issue to report problems or propose improvements, and submit pull
 
 ## Licenses and credits
 
-Code and automation are licensed under [Apache-2.0](LICENSE-APACHE); documentation and other content are licensed under [CC BY-NC-SA 4.0](LICENSE). Papers remain the property of their authors and publishers. Thanks to arXiv for its open metadata.
+This project is licensed under [Apache-2.0](LICENSE). Rights and terms for papers and their metadata are determined separately by their authors, publishers, and data sources; the project license does not alter them. Thanks to arXiv for its open metadata.

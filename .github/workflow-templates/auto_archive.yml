@@ -1,0 +1,52 @@
+name: Auto Archive & Organize
+
+on:
+  push:
+    paths:
+      - 'Inbox.md' # 仅当 Inbox.md 发生变化时触发
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: arxiv-database-writer
+  queue: max
+
+jobs:
+  process-inbox:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+          cache-dependency-path: 'scripts/requirements.txt'
+
+      - name: Install dependencies
+        run: |
+          pip install -r scripts/requirements.txt
+
+      - name: Process Inbox
+        run: |
+          python scripts/process_inbox.py
+
+      - name: Commit and Push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Papers/ Notes/ Contents.md Inbox.md data/arxiv.db
+          if git diff --cached --quiet; then
+            echo "没有需要提交的更新"
+            exit 0
+          fi
+          git commit -m "📚 论文已自动归档并更新目录"
+          git pull --rebase origin main
+          git push origin HEAD:main
