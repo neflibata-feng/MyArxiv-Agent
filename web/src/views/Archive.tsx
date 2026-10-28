@@ -46,7 +46,7 @@ export function ArchiveView({ client, t, searchTerm, config }: ArchiveViewProps)
 
   return (
      <div className="flex h-full relative">
-            <aside className={cn("w-72 border-r bg-card overflow-y-auto md:block", showFiles ? "absolute inset-y-0 left-0 z-20 max-w-[80%]" : "hidden")}>
+            <aside className={cn("w-72 border-r bg-card overflow-y-auto md:block", showFiles ? "absolute inset-y-0 left-0 z-20 max-w-[80%] md:static md:z-auto md:max-w-none" : "hidden")}>
                <div className="p-4 font-semibold border-b bg-muted/20 flex items-center justify-between">{t.archive}<Button className="md:hidden" variant="ghost" size="sm" onClick={() => setShowFiles(false)}>{t.closeFiles}</Button></div>
                <div className="p-2">
                   <RepoFileTree
