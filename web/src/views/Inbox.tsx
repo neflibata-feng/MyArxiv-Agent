@@ -135,12 +135,20 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
             }}>{t.undoDelete}</Button>
           </div>}
           {error && <div role="alert" className="p-3 text-sm text-destructive">{error}</div>}
-          <div className="p-4 border-b flex items-center justify-between bg-muted/10">
+          <div className="p-4 border-b flex flex-wrap gap-2 items-center justify-between bg-muted/10">
              <span className="text-sm font-medium flex items-center gap-2">
                 <Calendar className="h-4 w-4" /> {t.inbox}
                 {searchTerm && <Badge variant="secondary">{t.found} {filteredPapers.length}</Badge>}
              </span>
-             <div className="flex gap-2">
+             <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" disabled={displayed.length === 0 || loading || syncing} onClick={() => {
+                  const visible = new Set(displayed.map(paperKey))
+                  setPapers(prev => prev.map(p => visible.has(paperKey(p)) ? { ...p, selected: true } : p))
+                }}>{t.selectVisible}</Button>
+                <Button variant="outline" size="sm" disabled={displayed.length === 0 || loading || syncing} onClick={() => {
+                  const visible = new Set(displayed.map(paperKey))
+                  setPapers(prev => prev.map(p => visible.has(paperKey(p)) ? { ...p, selected: false } : p))
+                }}>{t.clearVisible}</Button>
                 <Button variant="outline" size="sm" onClick={() => { if (!changesCount || window.confirm(t.refreshDiscard)) fetchInbox(true) }} disabled={loading || syncing}>
                    <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} /> {t.refresh}
                 </Button>
