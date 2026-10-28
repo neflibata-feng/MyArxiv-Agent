@@ -10,11 +10,11 @@ import yaml from 'js-yaml'
 
 // Components
 import { Login } from '@/components/Login'
-import { HomeView } from '@/views/Home'
-import { InboxView } from '@/views/Inbox'
-import { ArchiveView } from '@/views/Archive'
-import { WorkbenchView } from '@/views/Workbench'
-import { SettingsView } from '@/views/Settings'
+const HomeView = React.lazy(() => import('@/views/Home').then(module => ({ default: module.HomeView })))
+const InboxView = React.lazy(() => import('@/views/Inbox').then(module => ({ default: module.InboxView })))
+const ArchiveView = React.lazy(() => import('@/views/Archive').then(module => ({ default: module.ArchiveView })))
+const WorkbenchView = React.lazy(() => import('@/views/Workbench').then(module => ({ default: module.WorkbenchView })))
+const SettingsView = React.lazy(() => import('@/views/Settings').then(module => ({ default: module.SettingsView })))
 import { I18N, Lang } from '@/i18n/locales'
 
 type Tab = 'home' | 'inbox' | 'archive' | 'workbench' | 'settings'
@@ -179,11 +179,13 @@ function App() {
       
       {/* Main Content */}
       <main className="flex-1 overflow-hidden relative">
+         <React.Suspense fallback={<div role="status" className="p-4">{t.loading}</div>}>
          {activeTab === 'home' && <HomeView client={client} config={config} t={t} />}
          {activeTab === 'inbox' && <InboxView client={client} t={t} searchTerm={searchTerm} />}
         {activeTab === 'archive' && <ArchiveView client={client} t={t} searchTerm={searchTerm} config={config} />}
         {activeTab === 'workbench' && <WorkbenchView client={client} t={t} searchTerm={searchTerm} config={config} />}
          {activeTab === 'settings' && <SettingsView client={client} t={t} appConfig={{theme, setTheme, lang, setLang}} globalConfig={config} setGlobalConfig={setConfig} />}
+         </React.Suspense>
       </main>
 
       {/* Footer */}
