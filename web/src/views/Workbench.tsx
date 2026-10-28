@@ -3,7 +3,7 @@ import { GithubClient, RepoFile } from '@/lib/github'
 import { Translation } from '@/i18n/locales'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { FileText, Save, SplitSquareHorizontal, Minimize } from 'lucide-react'
+import { FileText, Save, SplitSquareHorizontal, Minimize, Copy } from 'lucide-react'
 import { MarkdownViewer } from '@/components/MarkdownViewer'
 import { cn } from '@/lib/utils'
 import { RepoFileTree } from '@/components/RepoFileTree'
@@ -25,6 +25,7 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [copyStatus, setCopyStatus] = useState('')
   const requestId = useRef(0)
 
    const rootPath = config?.paths?.notes_dir || 'Notes'
@@ -44,6 +45,7 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
     const id = ++requestId.current
     setLoading(true)
     setError('')
+    setCopyStatus('')
     try {
       const result = await client.getFileContent(file.path)
       if (id !== requestId.current) return
@@ -73,6 +75,17 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
       if (id === requestId.current) setError(t.saveFail)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const copyNote = async () => {
+    const id = requestId.current
+    try {
+      if (!navigator.clipboard) throw new Error('Clipboard unavailable')
+      await navigator.clipboard.writeText(content)
+      if (id === requestId.current) setCopyStatus(t.noteCopied)
+    } catch {
+      if (id === requestId.current) setCopyStatus(t.copyNoteFailed)
     }
   }
 
@@ -111,6 +124,8 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
                         {viewMode === 'split' ? <Minimize className="h-4 w-4 mr-2"/> : <SplitSquareHorizontal className="h-4 w-4 mr-2"/>}
                         {viewMode === 'split' ? t.singleView : t.splitView}
                      </Button>
+                     <span role="status" className="text-xs text-muted-foreground">{copyStatus}</span>
+                     <Button variant="ghost" size="icon" disabled={loading} onClick={copyNote} aria-label={t.copyNote} title={t.copyNote}><Copy className="h-4 w-4" /></Button>
                      <Button size="sm" disabled={!dirty || loading || saving} onClick={saveFile}>
                         <Save className="h-4 w-4 mr-2"/> {t.save}
                      </Button>
