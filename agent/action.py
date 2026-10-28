@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 from research_agent import run
+from research_sources import normalize_id
 
 SCENARIOS = {
     "论文检索": "按需检索收件箱、仓库论文和 arXiv，列出标题、作者、链接和相关性，注明来源和检索局限。",
@@ -20,7 +21,17 @@ def main() -> int:
         print("缺少有效的研究场景、问题或 Actions 摘要路径", file=sys.stderr)
         return 1
     try:
-        answer, used = run(SCENARIOS[scenario] + "\n用户问题：" + question)
+        raw_ids = os.environ.get("RESEARCH_PAPER_IDS", "").strip()
+        ids = [item.strip() for item in raw_ids.split(",")] if raw_ids else []
+        if len(ids) > 10 or any(normalize_id(item) is None for item in ids):
+            raise ValueError("论文 ID 须为逗号分隔的有效 arXiv ID，最多 10 个")
+        budget_text = os.environ.get("RESEARCH_BUDGET", "1000000")
+        if not budget_text.isascii() or not budget_text.isdigit() or len(budget_text) > 7:
+            raise ValueError("token 预算须为 1 到 1000000 之间的整数")
+        budget = int(budget_text)
+        if not 1 <= budget <= 1_000_000:
+            raise ValueError("token 预算须为 1 到 1000000 之间的整数")
+        answer, used = run(SCENARIOS[scenario] + "\n用户问题：" + question, budget=budget, selected_ids=ids)
         # Mask the configured credential even if a provider unexpectedly echoes it.
         key = os.environ.get("key", "")
         if key:

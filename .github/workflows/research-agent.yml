@@ -11,6 +11,15 @@ on:
           - 论文检索
           - 阅读笔记
           - 文献综述
+      paper_ids:
+        description: 可选，仓库内 arXiv ID（逗号分隔，最多 10 个）
+        required: false
+        type: string
+      budget:
+        description: 本次 token 预算（1 至 1000000）
+        required: true
+        default: '1000000'
+        type: string
       question:
         description: 研究问题（请勿填写密钥或敏感信息）
         required: true
@@ -36,6 +45,9 @@ jobs:
         env:
           key: ${{ secrets.key }}
           DEEPSEEK_MODEL: deepseek-flash
+          DEEPSEEK_BASE_URL: ${{ vars.DEEPSEEK_BASE_URL || 'https://api.deepseek.com' }}
+          RESEARCH_PAPER_IDS: ${{ inputs.paper_ids }}
+          RESEARCH_BUDGET: ${{ inputs.budget }}
           RESEARCH_SCENARIO: ${{ inputs.scenario }}
           RESEARCH_QUESTION: ${{ inputs.question }}
         run: python agent/action.py
