@@ -62,6 +62,7 @@ export const I18N = {
     singleView: "退出编辑",
     openFiles: "选择档案文件",
     closeFiles: "关闭文件列表",
+    collapseFolders: "收起文件夹",
     folder: "文件夹",
     file: "文件",
 
@@ -150,6 +151,7 @@ export const I18N = {
     singleView: "Single",
     openFiles: "Choose archive file",
     closeFiles: "Close file list",
+    collapseFolders: "Collapse folders",
     folder: "Folder",
     file: "File",
 
