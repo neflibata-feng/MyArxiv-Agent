@@ -155,8 +155,7 @@ function App() {
                  value={searchTerm}
                  ref={searchRef}
                  onChange={(e) => setSearchTerm(e.target.value)}
-                 aria-label={t.search}
-                 id="global-search"
+                 id="global-search" aria-label={t.search}
               />
            </div>
            
