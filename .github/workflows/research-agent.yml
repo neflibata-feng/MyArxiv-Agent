@@ -1,0 +1,41 @@
+name: Research Agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: 研究场景
+        required: true
+        type: choice
+        options:
+          - 论文检索
+          - 阅读笔记
+          - 文献综述
+      question:
+        description: 研究问题（请勿填写密钥或敏感信息）
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: 安装依赖
+        run: python -m pip install -r scripts/requirements.txt
+      - name: 运行研究助手
+        env:
+          key: ${{ secrets.key }}
+          DEEPSEEK_MODEL: deepseek-flash
+          RESEARCH_SCENARIO: ${{ inputs.scenario }}
+          RESEARCH_QUESTION: ${{ inputs.question }}
+        run: python agent/action.py
