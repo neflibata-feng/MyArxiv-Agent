@@ -31,7 +31,7 @@ export function PaperCard({ paper, onToggle, onDelete, t }: PaperCardProps) {
     try {
       if (!paper.link) return null
       const url = new URL(paper.link)
-      if (url.protocol !== 'https:' || !['arxiv.org', 'www.arxiv.org'].includes(url.hostname) || !url.pathname.startsWith('/abs/') || url.pathname === '/abs/') return null
+      if (!['http:', 'https:'].includes(url.protocol) || !['arxiv.org', 'www.arxiv.org'].includes(url.hostname) || !url.pathname.startsWith('/abs/') || url.pathname === '/abs/') return null
       return `https://arxiv.org/pdf/${url.pathname.slice('/abs/'.length)}`
     } catch {
       return null
