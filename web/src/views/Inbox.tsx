@@ -8,6 +8,8 @@ import { cn } from '@/lib/utils'
 import { PaperCard } from '@/components/PaperCard'
 import Fuse from 'fuse.js'
 
+const paperKey = (paper: Paper) => paper.sourceLine ?? paper.id
+
 interface InboxViewProps {
   client: GithubClient
   t: Translation
@@ -57,16 +59,16 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
 
   const changesCount = useMemo(() => {
      if (initialPapers.length === 0) return 0
-     const initialMap = new Map(initialPapers.map(p => [p.id, p]))
-     const currentIds = new Set(papers.map(p => p.id))
-     const deleted = initialPapers.filter(p => !currentIds.has(p.id)).length
+     const initialMap = new Map(initialPapers.map(p => [paperKey(p), p]))
+     const currentIds = new Set(papers.map(paperKey))
+     const deleted = initialPapers.filter(p => !currentIds.has(paperKey(p))).length
      const modified = papers.filter(p => {
-       const init = initialMap.get(p.id)
+       const init = initialMap.get(paperKey(p))
        return init && init.selected !== p.selected
      }).length
      return deleted + modified
   }, [papers, initialPapers])
-  
+
   // Filter by Search
   const filteredPapers = useMemo(() => {
     if (!searchTerm) return papers
@@ -98,7 +100,7 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
     })
     return order.map(g => ({ name: g, papers: map.get(g)||[] }))
   }, [filteredPapers])
-  
+
   const displayed = useMemo(() => activeGroup ? filteredPapers.filter(p => (p.group||"Other") === activeGroup) : filteredPapers, [filteredPapers, activeGroup])
 
   return (
@@ -143,9 +145,9 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
              {displayed.map(p => (
-               <PaperCard key={p.id} paper={p} t={t} 
-                 onToggle={() => setPapers(prev => prev.map(x => x.id===p.id ? {...x, selected: !x.selected} : x))}
-                 onDelete={() => setPapers(prev => prev.filter(x => x.id!==p.id))}
+               <PaperCard key={paperKey(p)} paper={p} t={t}
+                 onToggle={() => setPapers(prev => prev.map(x => paperKey(x)===paperKey(p) ? {...x, selected: !x.selected} : x))}
+                 onDelete={() => setPapers(prev => prev.filter(x => paperKey(x)!==paperKey(p)))}
                />
              ))}
              {displayed.length === 0 && <div className="text-center text-muted-foreground mt-10">{t.noPapers}</div>}
