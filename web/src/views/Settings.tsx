@@ -22,16 +22,25 @@ export function SettingsView({ client, t, appConfig, globalConfig, setGlobalConf
 
    // Load config
    useEffect(() => {
+     let active = true
+     setSha("")
+     setYamlError("")
      client.getFileContent("config.yaml").then((res: any) => {
+        if (!active) return
         setRawContent(res.content)
         setSha(res.sha)
         try {
            const parsed = yaml.load(res.content)
-           if (typeof parsed === 'object') setGlobalConfig(parsed)
+           if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+              setYamlError(t.configMustBeMapping)
+              return
+           }
+           setGlobalConfig(parsed)
            setYamlError("")
-        } catch (e) { console.error("YAML Parse Error", e) }
-     })
-   }, [])
+        } catch (e: any) { setYamlError(String(e?.message || e)) }
+     }).catch(() => { if (active) setYamlError(t.configLoadFailed) })
+     return () => { active = false }
+   }, [client])
 
    const handleSave = async () => {
      setLoading(true)
@@ -302,11 +311,11 @@ export function SettingsView({ client, t, appConfig, globalConfig, setGlobalConf
                                     setRawContent(nextRaw)
                                     try {
                                        const parsed = yaml.load(nextRaw)
-                                       if (typeof parsed === 'object' && parsed) {
+                                       if (typeof parsed === 'object' && parsed && !Array.isArray(parsed)) {
                                           setGlobalConfig(parsed)
                                           setYamlError('')
                                        } else {
-                                          setYamlError('YAML parsed but is not a mapping object.')
+                                          setYamlError(t.configMustBeMapping)
                                        }
                                     } catch (err: any) {
                                        setYamlError(String(err?.message || err))
@@ -318,7 +327,7 @@ export function SettingsView({ client, t, appConfig, globalConfig, setGlobalConf
                         </CardContent>
 
                         <div className="p-6 pt-0 flex items-center gap-3">
-                           <Button size="sm" onClick={handleSave} disabled={loading || !!yamlError}>
+                           <Button size="sm" onClick={handleSave} disabled={loading || !sha || !!yamlError}>
                               {loading ? <RefreshCw className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4 mr-2"/>}
                               {t.save}
                            </Button>

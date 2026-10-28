@@ -123,6 +123,8 @@
 > - `fetch.formatting.date_source`：可选 `published`/`updated`；分别对应 Atom 的 `<published>`（v1）与 `<updated>`（当前版本）。
 > - `features.arxiv_version_update_behavior`：`ignore` 忽略版本提示；`append_notice`/`replace` 会更新数据库中的版本元数据并生成“版本更新提示”。
 
+网页设置编辑器只允许保存有效的 YAML 映射；配置未成功加载时无法保存。
+
 ### 提供环境变量覆盖供选择
 
 支持用环境变量覆盖 `config.yaml` 中的任意配置项：
