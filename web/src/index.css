@@ -1,8 +1,9 @@
+@import "katex/dist/katex.min.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import "katex/dist/katex.min.css";
  
 @layer base {
   :root {
