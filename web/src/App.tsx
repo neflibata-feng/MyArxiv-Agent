@@ -151,11 +151,11 @@ function App() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <input 
                  className="h-9 w-full sm:w-40 lg:w-64 rounded-md border border-input bg-background pl-9 pr-4 text-sm"
-                 placeholder={t.searchPlaceholder}
+                 placeholder={t.searchPlaceholder} aria-label={t.search}
                  value={searchTerm}
                  ref={searchRef}
                  onChange={(e) => setSearchTerm(e.target.value)}
-                 id="global-search" aria-label={t.search}
+                 id="global-search"
               />
            </div>
            
