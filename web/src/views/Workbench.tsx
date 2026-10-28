@@ -17,6 +17,7 @@ interface WorkbenchViewProps {
 
 export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewProps) {
   const [showFiles, setShowFiles] = useState(false)
+  const [copyStatus, setCopyStatus] = useState('')
   const [activeFile, setActiveFile] = useState<RepoFile | null>(null)
   const [content, setContent] = useState("")
   const [viewMode, setViewMode] = useState<'split' | 'single'>('single')
@@ -25,7 +26,6 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [copyStatus, setCopyStatus] = useState('')
   const requestId = useRef(0)
 
    const rootPath = config?.paths?.notes_dir || 'Notes'
@@ -120,12 +120,12 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
                      {dirty && <Badge variant="outline" className="text-yellow-600 border-yellow-600 h-5">Modified</Badge>}
                   </div>
                   <div className="flex gap-2">
+                     <span role="status" className="text-xs text-muted-foreground">{copyStatus}</span>
+                     <Button variant="ghost" size="icon" disabled={loading} onClick={copyNote} aria-label={t.copyNote} title={t.copyNote}><Copy className="h-4 w-4" /></Button>
                      <Button variant="ghost" size="sm" onClick={() => setViewMode(v => v === 'split' ? 'single' : 'split')}>
                         {viewMode === 'split' ? <Minimize className="h-4 w-4 mr-2"/> : <SplitSquareHorizontal className="h-4 w-4 mr-2"/>}
                         {viewMode === 'split' ? t.singleView : t.splitView}
                      </Button>
-                     <span role="status" className="text-xs text-muted-foreground">{copyStatus}</span>
-                     <Button variant="ghost" size="icon" disabled={loading} onClick={copyNote} aria-label={t.copyNote} title={t.copyNote}><Copy className="h-4 w-4" /></Button>
                      <Button size="sm" disabled={!dirty || loading || saving} onClick={saveFile}>
                         <Save className="h-4 w-4 mr-2"/> {t.save}
                      </Button>
