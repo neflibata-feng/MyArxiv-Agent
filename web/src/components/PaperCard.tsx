@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
-import { AlertCircle, Trash2, ExternalLink, CheckCircle } from 'lucide-react'
+import { AlertCircle, Trash2, ExternalLink, CheckCircle, Copy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Paper } from '@/lib/github'
 import { Translation } from '@/i18n/locales'
@@ -16,6 +16,16 @@ interface PaperCardProps {
 
 export function PaperCard({ paper, onToggle, onDelete, t }: PaperCardProps) {
   const [expanded, setExpanded] = useState(false)
+  const [copyStatus, setCopyStatus] = useState('')
+  const copyLink = async () => {
+    try {
+      if (!paper.link || !navigator.clipboard) throw new Error('Clipboard unavailable')
+      await navigator.clipboard.writeText(paper.link)
+      setCopyStatus(t.copiedLink)
+    } catch {
+      setCopyStatus(t.copyLinkFailed)
+    }
+  }
   const isUpdate = paper.type === 'update'
 
   return (
@@ -99,6 +109,9 @@ export function PaperCard({ paper, onToggle, onDelete, t }: PaperCardProps) {
                </Button>
             )}
          </div>
+         <div className="flex items-center gap-2">
+           <span className="text-xs text-muted-foreground" role="status">{copyStatus}</span>
+           {paper.link && <Button variant="ghost" size="sm" onClick={copyLink} aria-label={t.copyLink}><Copy className="h-3 w-3 mr-1" />{t.copyLink}</Button>}
          <Button 
            variant={paper.selected ? "default" : "outline"} 
            size="sm"
@@ -112,6 +125,7 @@ export function PaperCard({ paper, onToggle, onDelete, t }: PaperCardProps) {
              </>
            ) : t.collect}
          </Button>
+         </div>
       </CardFooter>
     </Card>
   )
