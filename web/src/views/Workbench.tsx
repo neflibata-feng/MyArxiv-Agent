@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { GithubClient, RepoFile } from '@/lib/github'
 import { Translation } from '@/i18n/locales'
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,10 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
   const [showFiles, setShowFiles] = useState(false)
   const [activeFile, setActiveFile] = useState<RepoFile | null>(null)
   const [content, setContent] = useState("")
+  const { characterCount, lineCount } = useMemo(() => ({
+    characterCount: Array.from(content).length,
+    lineCount: content ? content.split('\n').length : 0,
+  }), [content])
   const [viewMode, setViewMode] = useState<'split' | 'single'>('single')
   const [isEditing, setIsEditing] = useState(false)
   const [dirty, setDirty] = useState(false)
@@ -114,6 +118,7 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
                <div className="h-12 border-b flex items-center justify-between px-4 sticky top-0 bg-background/95 backdrop-blur z-10">
                   <div className="flex items-center gap-2">
                      <span className="font-semibold text-sm">{activeFile.name}</span>
+                     <span className="hidden sm:inline text-xs text-muted-foreground whitespace-nowrap">{lineCount} {t.lines} · {characterCount} {t.characters}</span>
                      {dirty && <Badge variant="outline" className="text-yellow-600 border-yellow-600 h-5">Modified</Badge>}
                   </div>
                   <div className="flex gap-2">

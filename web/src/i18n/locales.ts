@@ -73,6 +73,8 @@ export const I18N = {
     singleView: "退出编辑",
     openFiles: "选择档案文件",
     closeFiles: "关闭文件列表",
+    lines: "行",
+    characters: "字符",
     folder: "文件夹",
     file: "文件",
 
@@ -172,6 +174,8 @@ export const I18N = {
     singleView: "Single",
     openFiles: "Choose archive file",
     closeFiles: "Close file list",
+    lines: "lines",
+    characters: "characters",
     folder: "Folder",
     file: "File",
 
