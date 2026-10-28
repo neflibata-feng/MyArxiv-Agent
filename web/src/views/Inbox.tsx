@@ -21,31 +21,38 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
   const [sha, setSha] = useState<string>("")
   const [loading, setLoading] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [error, setError] = useState('')
   const [activeGroup, setActiveGroup] = useState<string | null>(null)
 
   const fetchInbox = async (force = false) => {
     setLoading(true)
+    setError('')
+    let failed = true
     try {
       const { content, sha } = await client.getFileContent("Inbox.md", force)
       const parsed = GithubClient.parseInbox(content)
+      failed = false
       setOriginalContent(content)
       setSha(sha)
       setPapers(parsed)
       setInitialPapers(parsed)
     } catch(e) { console.error(e) } 
-    finally { setLoading(false) }
+    finally { if (failed) setError(t.inboxLoadFailed); setLoading(false) }
   }
 
   useEffect(() => { fetchInbox() }, [])
 
   const handleSync = async () => {
+    let failed = true
     setSyncing(true)
+    setError('')
     try {
       const newContent = GithubClient.reconstructInbox(originalContent, papers)
       await client.updateFile("Inbox.md", newContent, sha, `MyArxiv-Agent Sync ${new Date().toISOString()}`)
+      failed = false
       await fetchInbox()
     } catch(e) { console.error(e) } 
-    finally { setSyncing(false) }
+    finally { if (failed) setError(t.syncFail); setSyncing(false) }
   }
 
   const changesCount = useMemo(() => {
@@ -111,6 +118,7 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
           </div>
        </aside>
        <div className="flex-1 flex flex-col h-full overflow-hidden">
+          {error && <div role="alert" className="p-3 text-sm text-destructive">{error}</div>}
           <div className="p-4 border-b flex items-center justify-between bg-muted/10">
              <span className="text-sm font-medium flex items-center gap-2">
                 <Calendar className="h-4 w-4" /> {t.inbox}
@@ -120,7 +128,7 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
                 <Button variant="outline" size="sm" onClick={() => { if (!changesCount || window.confirm(t.refreshDiscard)) fetchInbox(true) }} disabled={loading || syncing}>
                    <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} /> {t.refresh}
                 </Button>
-                <Button size="sm" onClick={handleSync} disabled={syncing}>
+                <Button size="sm" onClick={handleSync} disabled={syncing || loading || !sha}>
                    <Save className="h-4 w-4 mr-2"/> {t.sync} ({changesCount})
                 </Button>
              </div>
