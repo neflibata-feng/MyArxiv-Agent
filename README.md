@@ -55,6 +55,8 @@
 ---
 如果主页文件无法读取，网页会显示错误提示；请检查主页文件路径和仓库访问权限。
 
+网页按需加载各功能页面，减少登录页首次打开时需要下载的脚本。
+
 ## 页面展示
 
 - ![](https://raw.githubusercontent.com/neflibata-feng/MyArxiv-Agent/main/assets/5.png)
