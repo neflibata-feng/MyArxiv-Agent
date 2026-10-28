@@ -30,6 +30,16 @@ export function WorkbenchView({ client, t, searchTerm, config }: WorkbenchViewPr
    const rootPath = config?.paths?.notes_dir || 'Notes'
 
    useEffect(() => {
+      if (!dirty) return
+      const warn = (event: BeforeUnloadEvent) => {
+         event.preventDefault()
+         event.returnValue = ''
+      }
+      window.addEventListener('beforeunload', warn)
+      return () => window.removeEventListener('beforeunload', warn)
+   }, [dirty])
+
+   useEffect(() => {
       requestId.current += 1
       setLoading(false)
       setError('')
