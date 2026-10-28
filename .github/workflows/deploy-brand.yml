@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: codex/brand-site
+          ref: brand-site
       - name: Prepare site
         run: mkdir -p _site && cp index.html _site/index.html
       - uses: actions/configure-pages@v5
