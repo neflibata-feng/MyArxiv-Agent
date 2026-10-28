@@ -169,7 +169,7 @@ function App() {
       
       {/* Main Content */}
       <main className="flex-1 overflow-hidden relative">
-         {activeTab === 'home' && <HomeView client={client} config={config} />}
+         {activeTab === 'home' && <HomeView client={client} config={config} t={t} />}
          {activeTab === 'inbox' && <InboxView client={client} t={t} searchTerm={searchTerm} />}
         {activeTab === 'archive' && <ArchiveView client={client} t={t} searchTerm={searchTerm} config={config} />}
         {activeTab === 'workbench' && <WorkbenchView client={client} t={t} searchTerm={searchTerm} config={config} />}

@@ -51,6 +51,8 @@
 5. 同时本仓库依然可以作为个人arXiv自动化论文知识空间的模板，你可以**fork**本仓库并根据自己的需求进行修改和使用。
 
 ---
+如果主页文件无法读取，网页会显示错误提示；请检查主页文件路径和仓库访问权限。
+
 ## 页面展示
 
 - ![](https://raw.githubusercontent.com/neflibata-feng/MyArxiv-Agent/main/assets/5.png)
