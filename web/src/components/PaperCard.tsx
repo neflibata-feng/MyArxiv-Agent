@@ -57,8 +57,8 @@ export function PaperCard({ paper, onToggle, onDelete, t }: PaperCardProps) {
                     </CardTitle>
                  </a>
               </div>
-              <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                 <Button variant="ghost" size="icon" onClick={onDelete} className="text-muted-foreground hover:text-destructive h-8 w-8">
+              <div className="flex gap-1 shrink-0">
+                 <Button variant="ghost" size="icon" onClick={onDelete} aria-label={t.removePaper} title={t.removePaper} className="text-muted-foreground hover:text-destructive h-8 w-8">
                    <Trash2 className="h-4 w-4" />
                  </Button>
               </div>
