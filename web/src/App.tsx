@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { 
   BookOpen, Home, Calendar, Archive, Monitor, Settings,
-  LogOut, Search
+  LogOut, Search, X
 } from 'lucide-react'
 import { GithubClient } from '@/lib/github'
 import { Button } from '@/components/ui/button'
@@ -27,6 +27,7 @@ function App() {
   const [token, setToken] = useState<string>(() => localStorage.getItem("github_token") || "")
   const [repoStr, setRepoStr] = useState<string>(() => localStorage.getItem('github_repo') || "")
   
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [client, setClient] = useState<GithubClient | null>(null)
   const [activeTab, setActiveTab] = useState<Tab>('home')
   const [searchTerm, setSearchTerm] = useState("")
@@ -137,26 +138,35 @@ function App() {
           <BookOpen className="h-5 w-5" /> {t.appTitle}
         </h1>
         
-        <nav className="flex items-center gap-1 md:gap-2 flex-1 overflow-x-auto no-scrollbar">
+        <nav className={cn("flex items-center gap-1 md:gap-2 flex-1 overflow-x-auto no-scrollbar", mobileSearchOpen && "hidden sm:flex")}>
            <NavButton icon={<Home/>} label={t.home} active={activeTab === 'home'} onClick={() => setActiveTab('home')} />
            <NavButton icon={<Calendar/>} label={t.inbox} active={activeTab === 'inbox'} onClick={() => setActiveTab('inbox')} />
            <NavButton icon={<Archive/>} label={t.archive} active={activeTab === 'archive'} onClick={() => setActiveTab('archive')} />
            <NavButton icon={<Monitor/>} label={t.workbench} active={activeTab === 'workbench'} onClick={() => setActiveTab('workbench')} />
         </nav>
 
-        <div className="flex items-center gap-2 ml-auto">
+        <div className={cn("flex items-center gap-2", mobileSearchOpen ? "flex-1 min-w-0" : "ml-auto")}>
            {/* Search Bar - Global */}
-           <div className="relative hidden sm:block">
+           <div className={cn("relative", mobileSearchOpen ? "flex-1 sm:flex-none" : "hidden sm:block")}>
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <input 
-                 className="h-9 w-40 lg:w-64 rounded-md border border-input bg-background pl-9 pr-4 text-sm"
+                 className="h-9 w-full sm:w-40 lg:w-64 rounded-md border border-input bg-background pl-9 pr-4 text-sm"
                  placeholder={t.searchPlaceholder}
                  value={searchTerm}
                  ref={searchRef}
                  onChange={(e) => setSearchTerm(e.target.value)}
+                 id="global-search"
               />
            </div>
            
+           <Button variant="ghost" size="icon" className="sm:hidden" aria-label={mobileSearchOpen ? t.closeSearch : t.search} onClick={() => {
+             const open = !mobileSearchOpen
+             setMobileSearchOpen(open)
+             if (open) requestAnimationFrame(() => document.getElementById('global-search')?.focus())
+           }}>
+             {mobileSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+           </Button>
+
            <Button variant="ghost" size="icon" onClick={() => setActiveTab('settings')} className={cn(activeTab==='settings' && "bg-accent")}>
              <Settings className="h-5 w-5" />
            </Button>
