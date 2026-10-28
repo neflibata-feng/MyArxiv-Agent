@@ -51,10 +51,11 @@ def _sanitize_filename(config, name: str) -> str:
     # Always prevent path traversal / separator issues.
     value = value.replace("/", "_").replace("\\", "_")
 
-    if not sanitize:
-        return value.strip()
+    if sanitize:
+        value = re.sub(r'[\\/*?:"<>|]', "", value)
 
-    return re.sub(r'[\\/*?:"<>|]', "", value).strip()
+    value = value.strip()
+    return "_" if value in {"", ".", ".."} else value
 
 
 def _paths_from_config(config):
