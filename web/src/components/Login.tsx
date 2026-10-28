@@ -15,11 +15,12 @@ interface LoginProps {
   token: string
   setToken: (s: string) => void
   handleLogin: () => void
+  loginError: boolean
 }
 
 export function Login({ 
   t, lang, setLang, theme, setTheme,
-  repoStr, setRepoStr, token, setToken, handleLogin 
+  repoStr, setRepoStr, token, setToken, handleLogin, loginError
 }: LoginProps) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4 relative">
@@ -54,6 +55,7 @@ export function Login({
                  onChange={e => setToken(e.target.value)}
                />
             </div>
+            {loginError && <p role="alert" className="text-sm text-destructive">{t.invalidRepo}</p>}
             <Button type="submit" className="w-full" disabled={!token || !repoStr}>
               {t.connect}
             </Button>
