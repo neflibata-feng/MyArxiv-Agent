@@ -25,6 +25,7 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState('')
   const [activeGroup, setActiveGroup] = useState<string | null>(null)
+  const [lastDeleted, setLastDeleted] = useState<{ paper: Paper; index: number } | null>(null)
 
   const fetchInbox = async (force = false) => {
     setLoading(true)
@@ -38,6 +39,7 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
       setSha(sha)
       setPapers(parsed)
       setInitialPapers(parsed)
+      setLastDeleted(null)
     } catch(e) { console.error(e) } 
     finally { if (failed) setError(t.inboxLoadFailed); setLoading(false) }
   }
@@ -120,6 +122,18 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
           </div>
        </aside>
        <div className="flex-1 flex flex-col h-full overflow-hidden">
+          {lastDeleted && <div role="status" className="p-3 text-sm flex items-center gap-2">
+            <span>{t.paperRemoved}</span>
+            <Button size="sm" variant="outline" disabled={syncing || loading} onClick={() => {
+              setPapers(prev => {
+                if (prev.some(item => paperKey(item) === paperKey(lastDeleted.paper))) return prev
+                const next = [...prev]
+                next.splice(Math.min(lastDeleted.index, next.length), 0, lastDeleted.paper)
+                return next
+              })
+              setLastDeleted(null)
+            }}>{t.undoDelete}</Button>
+          </div>}
           {error && <div role="alert" className="p-3 text-sm text-destructive">{error}</div>}
           <div className="p-4 border-b flex items-center justify-between bg-muted/10">
              <span className="text-sm font-medium flex items-center gap-2">
@@ -147,7 +161,10 @@ export function InboxView({ client, t, searchTerm }: InboxViewProps) {
              {displayed.map(p => (
                <PaperCard key={paperKey(p)} paper={p} t={t}
                  onToggle={() => setPapers(prev => prev.map(x => paperKey(x)===paperKey(p) ? {...x, selected: !x.selected} : x))}
-                 onDelete={() => setPapers(prev => prev.filter(x => paperKey(x)!==paperKey(p)))}
+                 onDelete={() => {
+                   setLastDeleted({ paper: p, index: papers.findIndex(x => paperKey(x) === paperKey(p)) })
+                   setPapers(prev => prev.filter(x => paperKey(x)!==paperKey(p)))
+                 }}
                />
              ))}
              {displayed.length === 0 && <div className="text-center text-muted-foreground mt-10">{t.noPapers}</div>}
