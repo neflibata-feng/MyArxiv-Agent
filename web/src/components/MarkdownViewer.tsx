@@ -62,7 +62,7 @@ export function MarkdownViewer({ content, resolveAssetUrl }: MarkdownViewerProps
          ]}
          components={{
            img: ({ src, ...props }) => (
-             <img src={src && resolveAssetUrl ? resolveAssetUrl(src) : src} {...props} />
+             <img src={src && resolveAssetUrl ? resolveAssetUrl(src) : src} loading="lazy" decoding="async" {...props} />
            ),
            table: ({ children, ...props }) => (
              <div className="overflow-x-auto">
