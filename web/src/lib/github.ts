@@ -135,8 +135,20 @@ export class GithubClient {
         throw new Error("Path is a directory, not a file");
       }
 
+      let encoded = data.content;
+      if (data.encoding === "none") {
+        const blob = await this.octokit.rest.git.getBlob({
+          owner: this.owner,
+          repo: this.repo,
+          file_sha: data.sha,
+        });
+        if (blob.data.encoding !== "base64") throw new Error("Unsupported blob encoding");
+        encoded = blob.data.content;
+      } else if (data.encoding !== "base64") {
+        throw new Error("Unsupported file encoding");
+      }
       const content = new TextDecoder().decode(
-        Uint8Array.from(atob(data.content), (c) => c.charCodeAt(0))
+        Uint8Array.from(atob(encoded.replace(/\s/g, "")), (c) => c.charCodeAt(0))
       );
       
       const result = { content, sha: data.sha };
