@@ -150,6 +150,7 @@ def execute(args, cfg, state, store, root, output, run_id, trace):
             raise ValueError('历史任务选项无效')
         args={**restored,'operation':previous['operation'],'budget':args['budget']}
         trace['retry_of']=previous['id']
+        trace['effective_inputs']=safe(args)
         return execute(args,cfg,state,store,root,output,run_id,trace)
     if op=='feedback':
         paper_id=args['ids'][0]
@@ -238,6 +239,9 @@ def main():
         message=str(exc) if isinstance(exc,(ValueError,RuntimeError)) else type(exc).__name__+'：请检查配置及运行日志'
         record['error']=safe(message)[:500]
         answer='# 研究任务失败\n\n'+md(record['error'])+'\n'
+    effective=trace.pop('effective_inputs',None)
+    if effective is not None:
+        record.update(requested_operation='retry',operation=effective['operation'],inputs=effective)
     record.update(ended_at=now(),elapsed_seconds=round(time.monotonic()-started,2),used_tokens=trace.get('used_tokens',0),trace=safe(trace))
     record=safe(record);answer=safe(answer)
     try:

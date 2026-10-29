@@ -27,13 +27,6 @@ def documents(root, config, stats=None):
     stats = stats if stats is not None else {}
     stats.setdefault('skipped_files', 0)
     stats.setdefault('truncated_files', 0)
-    db = within(root, config.get('storage', {}).get('sqlite', {}).get('path', 'data/arxiv.db'))
-    if db.is_file():
-        with sqlite3.connect(db.as_uri() + '?mode=ro', uri=True) as conn:
-            conn.row_factory = sqlite3.Row
-            for row in conn.execute('SELECT arxiv_id,title,summary,category FROM papers ORDER BY arxiv_id LIMIT 3000'):
-                paper_id = str(row['arxiv_id'])
-                yield ('arxiv:' + paper_id, paper_id, row['category'] or '', str(row['title'] or '') + '\n' + str(row['summary'] or ''))
     paths = config.get('paths', {})
     scanned = 0
     for name, default in [('notes_dir', 'Notes'), ('papers_dir', 'Papers'), ('pdfs_dir', 'pdfs')]:
@@ -82,6 +75,15 @@ def documents(root, config, stats=None):
                 text = text[:MAX_TEXT_CHARS]
                 if text.strip():
                     yield (path.relative_to(root).as_posix(), normalize_id(path.stem) or '', '', text)
+
+    # Full text is irreplaceable evidence; index it before rebuildable abstracts.
+    db = within(root, config.get('storage', {}).get('sqlite', {}).get('path', 'data/arxiv.db'))
+    if db.is_file():
+        with sqlite3.connect(db.as_uri() + '?mode=ro', uri=True) as conn:
+            conn.row_factory = sqlite3.Row
+            for row in conn.execute('SELECT arxiv_id,title,summary,category FROM papers ORDER BY arxiv_id LIMIT 3000'):
+                paper_id = str(row['arxiv_id'])
+                yield ('arxiv:' + paper_id, paper_id, row['category'] or '', str(row['title'] or '') + '\n' + str(row['summary'] or ''))
 
 
 def _build(root, config, target):
