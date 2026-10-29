@@ -98,9 +98,15 @@ def inspect(store):
     except (AttributeError, RuntimeError, TypeError):
         history = []
         lines.append('研究状态中的重试记录暂不可读。')
-    retries = [item for item in history if isinstance(item, dict) and item.get('operation') == 'retry'][-20:]
+    retries = [item for item in history if isinstance(item, dict) and
+               (item.get('operation') == 'retry' or item.get('requested_operation') == 'retry')][-20:]
     for item in reversed(retries):
-        target = item.get('target') or item.get('target_run_id') or item.get('target_id') or '—'
+        trace = item.get('trace') if isinstance(item.get('trace'), dict) else {}
+        inputs = item.get('inputs') if isinstance(item.get('inputs'), dict) else {}
+        # For research retries inputs contain the effective request, whose target
+        # may be empty or a subscription ID. The trace identifies the retried run.
+        target = (trace.get('retry_of') or inputs.get('target') or item.get('target') or
+                  item.get('target_run_id') or item.get('target_id') or '—')
         lines.append('- ' + _text(item.get('id')) + '：' + _text(target) + '，' + _text(item.get('status')))
     if not retries:
         lines.append('暂无通过研究助手发起的重试记录；Actions 的尝试次数显示在上表。')
