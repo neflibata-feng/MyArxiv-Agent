@@ -127,7 +127,9 @@ Windows 用户也可以在文件管理器中复制文件后再提交。模板默
 
 网页会把令牌保存在浏览器本地，请只在可信设备上使用；不要把令牌写入文件或提交。
 
-## GitHub Actions 论文研究系统
+## GitHub Actions 论文研究系统（开发预览）
+
+> **启用前提：研究系统实现 [PR #82](https://github.com/neflibata-feng/MyArxiv-Agent/pull/82) 尚待合入。** 本节是配套使用说明，本 README 更新不会添加工作流或运行代码。在实现合入当前仓库的默认分支，并出现 `.github/workflows/research-agent.yml`、`agent/system_action.py` 及 `config.yaml` 中的 `agent` 配置之前，下面的操作不可用；仅添加 secret 或变量不能启用研究系统。请在具备这些文件后再按以下步骤配置。
 
 系统从显式兴趣和论文反馈学习偏好，推荐论文，并结合仓库资料生成研究回答和综述。学习发生在可查看、可撤销的反馈记录中，不修改模型参数。
 
