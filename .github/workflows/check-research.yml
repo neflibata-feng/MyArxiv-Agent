@@ -1,0 +1,90 @@
+name: Research Checks
+
+on:
+  pull_request:
+    paths: ['agent/**', 'scripts/**', 'config.yaml', '.github/workflows/**']
+  push:
+    branches: [main]
+    paths: ['agent/**', 'scripts/**', 'config.yaml', '.github/workflows/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install -r scripts/requirements.txt
+      - name: 检查 Python 与工作流配置
+        run: |
+          python -m compileall -q scripts agent
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+          for path in [Path('config.yaml'), *Path('.github/workflows').glob('*.yml')]:
+              assert isinstance(yaml.safe_load(path.read_text(encoding='utf-8')), dict), str(path)
+          PY
+      - name: 验证研究系统关键行为（临时数据，无凭据）
+        if: ${{ hashFiles('agent/system_action.py') != '' }}
+        run: |
+          python - <<'PY'
+          import sys, json, tempfile, copy
+          from pathlib import Path
+          from unittest.mock import Mock, patch
+          sys.path.insert(0, 'agent')
+          from learning import default_state, feedback, rank
+          from state_store import StateStore, validate_state
+          from library_index import build, search
+          from review_draft import render
+          from subscriptions import collect, apply_progress
+          state = default_state()
+          papers = [{'arxiv_id':'2401.00001','title':'robotics planning','summary':'control','published_at':'2024-01'},
+                    {'arxiv_id':'2401.00002','title':'language retrieval','summary':'embeddings','published_at':'2024-02'}]
+          baseline = rank(papers, [], state)
+          feedback(state, '2301.00001', 'like', 'robotics planning')
+          assert rank(papers, [], state)[0]['arxiv_id'] == '2401.00001'
+          feedback(state, '2301.00001', 'clear', '')
+          assert rank(papers, [], state) == baseline
+          assert rank(papers, ['robotics'], state, enabled=False)[0]['arxiv_id'] == '2401.00002'
+          corrupted = copy.deepcopy(state)
+          corrupted['feedback']['2401.00001'] = {'rating':'like', 'terms':{'robotics':-1}}
+          try:
+              validate_state(corrupted)
+              raise AssertionError('corrupt state accepted')
+          except ValueError:
+              pass
+          with tempfile.TemporaryDirectory() as directory:
+              root = Path(directory)
+              (root/'Notes').mkdir()
+              for name, text in [('a','robotics trajectory planning'),('b','language retrieval'),('c','robotics control')]:
+                  (root/'Notes'/f'{name}.md').write_text(text, encoding='utf-8')
+              index = root/'index.sqlite'
+              assert build(root, {}, index)['chunks'] >= 3
+              assert search(index, 'trajectory', path_prefix='Notes/a.md')[0]['path'] == 'Notes/a.md'
+              with patch.dict(sys.modules, {'numpy':None}):
+                  assert build(root, {}, index)['mode'] == 'fts'
+                  assert search(index, 'trajectory')
+          cfg={'agent':{'subscriptions':[{'id':'a','query':'robots'},{'id':'b','query':'control'}]}}
+          found, updates, report = collect(cfg, state, search=lambda _: [papers[0]], sleep=lambda _:None)
+          assert len(found) == 1
+          apply_progress(state, updates)
+          assert not collect(cfg, state, search=lambda _: [papers[0]], sleep=lambda _:None)[0]
+          raw={'title':'Review','scope':'abstracts','sections':[{'heading':'Methods','claims':[{'text':'Claim','source_ids':['2401.00001']}]}]}
+          assert 'https://arxiv.org/abs/2401.00001' in render(json.dumps(raw), ['2401.00001'])
+          try:
+              render(json.dumps(raw), [])
+              raise AssertionError('unknown citation accepted')
+          except ValueError:
+              pass
+          print('Learning, reversal, ordering, state validation, hybrid/fallback search, subscription dedupe and citation checks passed')
+          PY
