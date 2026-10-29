@@ -1,0 +1,84 @@
+name: Research Agent
+
+on:
+  schedule:
+    - cron: '10 2 * * *'
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: recommend 推荐 / feedback 学习反馈 / research 研究 / review 综述 / approve 确认保存 / tasks 任务中心 / retry 重试
+        type: choice
+        required: true
+        default: recommend
+        options: [recommend, feedback, research, review, approve, tasks, retry]
+      question:
+        description: 研究或综述问题（请勿填写密钥）
+        type: string
+        required: false
+      paper_ids:
+        description: arXiv ID，逗号分隔，最多 10 篇；feedback 时只填一篇
+        type: string
+        required: false
+      feedback:
+        description: 喜欢 like / 不喜欢 dislike / 撤销 clear
+        type: choice
+        default: like
+        options: [like, dislike, clear]
+      target:
+        description: 指定订阅 ID，或 approve/retry 对应的草稿/任务 ID
+        type: string
+        required: false
+      ranking:
+        description: 推荐排序（personalized 使用兴趣与反馈，date 恢复时间顺序）
+        type: choice
+        default: personalized
+        options: [personalized, date]
+      budget:
+        description: 本次累计 token 预算（1 至 1000000，仅研究/综述调用模型）
+        type: string
+        default: '1000000'
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    if: github.event_name != 'schedule' || vars.RESEARCH_SCHEDULE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+      actions: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: 安装依赖
+        run: python -m pip install -r scripts/requirements.txt
+      - name: 运行研究系统
+        env:
+          key: ${{ secrets.key }}
+          GH_TOKEN: ${{ github.token }}
+          DEEPSEEK_MODEL: deepseek-flash
+          DEEPSEEK_BASE_URL: ${{ vars.DEEPSEEK_BASE_URL || 'https://api.deepseek.com' }}
+          RESEARCH_OPERATION: ${{ inputs.operation || 'recommend' }}
+          RESEARCH_QUESTION: ${{ inputs.question }}
+          RESEARCH_PAPER_IDS: ${{ inputs.paper_ids }}
+          RESEARCH_FEEDBACK: ${{ inputs.feedback || 'like' }}
+          RESEARCH_TARGET: ${{ inputs.target }}
+          RESEARCH_RANKING: ${{ inputs.ranking || 'personalized' }}
+          RESEARCH_BUDGET: ${{ inputs.budget || '1000000' }}
+          RESEARCH_OUTPUT: ${{ runner.temp }}/research-results
+        run: python agent/system_action.py
+      - name: 保存研究结果与任务记录
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/research-results/
+          if-no-files-found: warn
+          retention-days: 7
