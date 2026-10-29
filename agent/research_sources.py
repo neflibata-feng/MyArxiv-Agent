@@ -84,7 +84,7 @@ def search_arxiv(query):
 
 
 def collect_sources(tool_name, tool_result, sources):
-    if tool_name not in {"search_papers", "pending_papers", "get_papers", "search_arxiv"}:
+    if tool_name not in {"search_papers", "pending_papers", "get_papers", "search_arxiv", "search_library"}:
         return
     try:
         rows = json.loads(tool_result)

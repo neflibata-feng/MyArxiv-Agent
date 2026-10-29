@@ -3,3 +3,5 @@ feedparser
 bs4
 PyGithub
 PyYAML
+numpy>=1.24,<3
+pypdf>=5,<7
