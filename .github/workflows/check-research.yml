@@ -75,10 +75,10 @@ jobs:
                   assert build(root, {}, index)['mode'] == 'fts'
                   assert search(index, 'trajectory')
           cfg={'agent':{'subscriptions':[{'id':'a','query':'robots'},{'id':'b','query':'control'}]}}
-          found, updates, report = collect(cfg, state, search=lambda _: [papers[0]], sleep=lambda _:None)
+          found, updates, report = collect(cfg, state, search=lambda _, **kwargs: [papers[0]], sleep=lambda _:None)
           assert len(found) == 1
           apply_progress(state, updates)
-          assert not collect(cfg, state, search=lambda _: [papers[0]], sleep=lambda _:None)[0]
+          assert not collect(cfg, state, search=lambda _, **kwargs: [papers[0]], sleep=lambda _:None)[0]
           raw={'title':'Review','scope':'abstracts','sections':[{'heading':'Methods','claims':[{'text':'Claim','source_ids':['2401.00001']}]}]}
           assert 'https://arxiv.org/abs/2401.00001' in render(json.dumps(raw), ['2401.00001'])
           try:
