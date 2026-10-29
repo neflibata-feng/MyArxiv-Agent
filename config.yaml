@@ -145,3 +145,14 @@ archive:
 
 
 
+
+# GitHub Actions 研究系统：显式兴趣、可撤销反馈与独立主题订阅
+agent:
+  interests: []
+  subscriptions:
+    - id: multi-agent
+      query: "multi agent collaboration"
+      enabled: false
+    - id: retrieval
+      query: "retrieval augmented generation"
+      enabled: false

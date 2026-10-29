@@ -88,3 +88,82 @@ jobs:
               pass
           print('Learning, reversal, ordering, state validation, hybrid/fallback search, subscription dedupe and citation checks passed')
           PY
+      - name: 回归审查发现的索引容量与连续重试问题
+        if: ${{ hashFiles('agent/system_action.py') != '' }}
+        run: |
+          python - <<'PY'
+          import sys, os, json, sqlite3, tempfile, copy
+          from pathlib import Path
+          from unittest.mock import patch
+          sys.path.insert(0,'agent')
+          from library_index import build,search
+          from learning import default_state
+          from state_store import validate_state
+          import system_action as app
+          with tempfile.TemporaryDirectory() as directory:
+           root=Path(directory);(root/'data').mkdir();(root/'Notes').mkdir()
+           (root/'config.yaml').write_text('{}')
+           (root/'Notes'/'evidence.md').write_text('uniquenoteevidence robot trail')
+           with sqlite3.connect(root/'data'/'arxiv.db') as db:
+            db.execute('CREATE TABLE papers(arxiv_id,title,summary,category)')
+            db.executemany('INSERT INTO papers VALUES(?,?,?,?)',[(str(i),'metadata','plain abstract','cs.AI') for i in range(2000)])
+           with patch.dict(sys.modules,{'numpy':None}):
+            report=build(root,{},root/'index.sqlite')
+            assert report['chunks']==2000
+            assert search(root/'index.sqlite','uniquenoteevidence')[0]['path']=='Notes/evidence.md'
+           request={'operation':'research','ids':[],'budget':10000,'question':'question','target':'','rating':'like','ranking':'personalized'}
+           class Memory:
+            def __init__(self): self.state=default_state();self.state['runs']=[{'id':'1-1','operation':'research','status':'failed','inputs':request}]
+            def load(self):return copy.deepcopy(self.state),'sha'
+            def update(self,fn):
+             current=copy.deepcopy(self.state);fn(current);validate_state(current);self.state=current;return copy.deepcopy(current)
+           store=Memory()
+           def invoke(target,rid):
+            env={'key':'fake','GITHUB_RUN_ID':rid,'GITHUB_RUN_ATTEMPT':'1','RESEARCH_OUTPUT':str(root/'out'),'RESEARCH_OPERATION':'retry','RESEARCH_TARGET':target,'RESEARCH_BUDGET':'12000'}
+            with patch.dict(os.environ,env,clear=True),patch.object(app,'ROOT',root),patch.object(app,'StateStore',return_value=store),patch.object(app,'build',return_value={}),patch.object(app,'run',side_effect=RuntimeError('simulated model failure')):
+             assert app.main()==1
+           invoke('1-1','2')
+           record=store.state['runs'][-1]
+           assert record['operation']=='research' and record['requested_operation']=='retry'
+           assert record['inputs']['operation']=='research' and record['inputs']['budget']==12000
+           assert record['trace']['retry_of']=='1-1'
+           # The original may be evicted; the latest failed attempt is independently retryable.
+           store.state['runs']=[record]
+           invoke('2-1','3')
+           record=store.state['runs'][-1]
+           assert record['operation']=='research' and record['trace']['retry_of']=='2-1'
+           assert record['error']=='simulated model failure'
+           # Inconsistent historic inputs must never replay approval or feedback.
+           store.state['runs']=[{'id':'4-1','operation':'research','status':'failed','inputs':{**request,'operation':'approve'}}]
+           with patch.object(app,'approve') as approval:
+            invoke('4-1','5');assert not approval.called
+          print('PR82 regression: full text survives metadata cap; retry chains persist effective inputs and reject forbidden replay')
+          PY
+      - name: 回归重试历史的实际持久化结构
+        if: ${{ hashFiles('agent/system_action.py') != '' }}
+        run: |
+          python - <<'PY'
+          import sys
+          sys.path.insert(0, 'agent')
+          from types import SimpleNamespace
+          from workflow_center import inspect as inspect_center
+          class HistoryStore:
+              repo = 'example/papers'
+              def request(self, *args, **kwargs):
+                  return SimpleNamespace(status_code=200, json=lambda: {'workflow_runs': []})
+              def load(self):
+                  return {'runs': [
+                      {'id':'10-1','operation':'retry','inputs':{'target':'actions:42'},'trace':{'retry_of':'actions:42'},'status':'completed'},
+                      {'id':'11-1','operation':'research','requested_operation':'retry','inputs':{'target':'topic'},'trace':{'retry_of':'9-1'},'status':'failed'},
+                      {'id':'12-1','operation':'retry','inputs':{'target':'actions:43'},'status':'completed'},
+                      {'id':'13-1','operation':'retry','target_run_id':'actions:44','status':'failed'},
+                      {'id':'14-1','operation':'retry','inputs':None,'trace':None,'status':'failed'},
+                      {'id':'15-1','operation':'research','status':'completed'}
+                  ]}, None
+          history = inspect_center(HistoryStore())
+          assert '10-1：actions:42' in history
+          assert '11-1：9-1' in history and '11-1：topic' not in history
+          assert '12-1：actions:43' in history and '13-1：actions:44' in history
+          assert '14-1：—' in history and '15-1' not in history
+          print('Retry history: persisted research/workflow schema, legacy fallback and incomplete records passed')
+          PY
