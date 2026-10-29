@@ -97,7 +97,7 @@ def execute_tool(name: str, args: dict, root: Path = ROOT) -> str:
         return json.dumps({"error": "无法读取资料，请检查工具参数、配置和本地数据。"}, ensure_ascii=False)
 
 
-def run(question: str, budget: int = MAX_BUDGET, root: Path = ROOT, selected_ids=None) -> tuple[str, int]:
+def run(question: str, budget: int = MAX_BUDGET, root: Path = ROOT, selected_ids=None, trace=None, structured=False) -> tuple[str, int]:
     key = os.environ.get("key", "")
     if not key:
         raise ValueError("请配置 GitHub Actions secret key")
@@ -112,6 +112,8 @@ def run(question: str, budget: int = MAX_BUDGET, root: Path = ROOT, selected_ids
     model = os.environ.get("DEEPSEEK_MODEL", "deepseek-flash")
     messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": question}]
     used = 0
+    if trace is not None:
+        trace.update(used_tokens=0, calls=[], sources=[])
     sources = set()
     missing_ids = []
     if selected_ids:
@@ -131,15 +133,19 @@ def run(question: str, budget: int = MAX_BUDGET, root: Path = ROOT, selected_ids
         if output_limit < 1:
             raise ValueError("token 预算不足，无法继续")
         try:
-            response = requests.post(base + "/chat/completions", headers={"Authorization": "Bearer " + key}, json={"model": model, "messages": messages, "tools": TOOLS, "max_tokens": output_limit}, timeout=90)
+            response = requests.post(base + "/chat/completions", headers={"Authorization": "Bearer " + key}, json={"model": model, "messages": messages, "tools": TOOLS, "max_tokens": output_limit, **({"response_format": {"type": "json_object"}} if structured else {})}, timeout=90)
             response.raise_for_status()
             data = response.json()
         except (requests.RequestException, ValueError):
             raise RuntimeError("模型请求失败；请检查服务地址、模型名和凭据。") from None
-        usage = data.get("usage", {}).get("total_tokens")
+        if not isinstance(data, dict) or not isinstance(data.get("usage"), dict):
+            raise RuntimeError("模型响应或用量格式无效")
+        usage = data["usage"].get("total_tokens")
         if type(usage) is not int or usage < 0:
             raise RuntimeError("服务未返回有效 token 用量，已停止以保护预算")
         used += usage
+        if trace is not None:
+            trace["used_tokens"] = used
         if used > budget:
             raise RuntimeError("服务报告的 token 用量已超过预算，已停止")
         try:
@@ -151,6 +157,10 @@ def run(question: str, budget: int = MAX_BUDGET, root: Path = ROOT, selected_ids
                     raise RuntimeError("模型输出达到长度限制，请缩小问题范围")
                 if not isinstance(message.get("content"), str):
                     raise ValueError
+                if trace is not None:
+                    trace["sources"] = sorted(sources)
+                if structured:
+                    return message["content"], used
                 answer = provenance(message["content"], sources)
                 if missing_ids:
                     answer += "\n\n以下指定论文未在仓库数据库中找到（版本号按基础 ID 查询）：" + ", ".join(missing_ids)
@@ -166,8 +176,10 @@ def run(question: str, budget: int = MAX_BUDGET, root: Path = ROOT, selected_ids
                     args = None
                 result = execute_tool(function["name"], args, root)
                 collect_sources(function["name"], result, sources)
+                if trace is not None:
+                    trace["calls"].append({"tool": function["name"], "ok": not isinstance(json.loads(result), dict) or "error" not in json.loads(result)})
                 messages.append({"role": "tool", "tool_call_id": call["id"], "content": result})
-        except (KeyError, IndexError, TypeError, ValueError):
+        except (KeyError, IndexError, TypeError, ValueError, AttributeError):
             raise RuntimeError("模型返回了无效响应") from None
     raise RuntimeError("工具调用轮次已达上限")
 
