@@ -58,14 +58,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          echo "连续 3 次收到 HTTP 429，等待 5 分钟后重新启动工作流"
+          echo "请求重试耗尽且出现 HTTP 429，等待 5 分钟后重新启动工作流"
           sleep 300
           gh workflow run daily_scheduler.yml --ref main -f rate_limit_retry=1
 
       - name: Stop after repeated rate limit
         if: steps.fetch.outputs.rate_limited == 'true' && github.event.inputs.rate_limit_retry == '1'
         run: |
-          echo "自动重启后仍连续 3 次收到 HTTP 429，本次停止"
+          echo "自动重启后仍发生限流相关失败，停止并标记失败，不再自动重启"
+          exit 75
 
       - name: Commit and Push changes
         if: steps.fetch.outputs.rate_limited != 'true'

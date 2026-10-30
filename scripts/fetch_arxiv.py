@@ -280,6 +280,7 @@ def fetch_papers():
     last_error: Optional[Exception] = None
     last_request_ts: Optional[float] = None
     consecutive_rate_limits = 0
+    rate_limited_during_retries = False
     for attempt in range(int(retries) + 1):
         try:
             if last_request_ts is not None:
@@ -308,11 +309,20 @@ def fetch_papers():
             last_error = e
             status_code = getattr(getattr(e, "response", None), "status_code", None)
             if status_code == 429:
+                rate_limited_during_retries = True
                 consecutive_rate_limits += 1
                 if consecutive_rate_limits >= 3:
                     raise ArxivRateLimitError("arXiv API 连续 3 次返回 HTTP 429") from e
             else:
                 consecutive_rate_limits = 0
+                # A timeout or a temporary server failure does not establish that
+                # a previously observed rate limit has cleared. Permanent errors
+                # (for example 401/404 or invalid Atom) must still fail normally.
+                transient = isinstance(e, (requests.Timeout, requests.ConnectionError)) or (
+                    status_code is not None and 500 <= status_code < 600
+                )
+                if not transient:
+                    rate_limited_during_retries = False
             if attempt >= int(retries):
                 break
             sleep_seconds = float(backoff_seconds) * (2**attempt)
@@ -325,6 +335,10 @@ def fetch_papers():
             time.sleep(sleep_seconds)
 
     if last_error is not None:
+        if rate_limited_during_retries:
+            raise ArxivRateLimitError(
+                "arXiv 请求重试耗尽，期间出现 HTTP 429，后续仍限流或发生暂时性网络错误"
+            ) from last_error
         raise RuntimeError(f"获取 arXiv 数据失败: {last_error}") from last_error
 
     papers = []
