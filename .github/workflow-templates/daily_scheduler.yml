@@ -57,9 +57,17 @@ jobs:
         if: steps.fetch.outputs.rate_limited == 'true' && github.event.inputs.rate_limit_retry != '1'
         env:
           GH_TOKEN: ${{ github.token }}
+          ARXIV_COOLDOWN: ${{ steps.fetch.outputs.retry_after_seconds }}
         run: |
-          echo "请求重试耗尽且出现 HTTP 429，等待 5 分钟后重新启动工作流"
-          sleep 300
+          echo "请求重试耗尽且出现 HTTP 429，按冷却时间重新启动工作流"
+          cooldown="${ARXIV_COOLDOWN:-300}"
+          if ! [[ "$cooldown" =~ ^[0-9]{1,6}$ ]]; then exit 1; fi
+          if [ "$cooldown" -gt 900 ]; then
+            echo "服务端要求冷却 ${cooldown} 秒，不提前重试；请冷却后手动运行"
+            exit 75
+          fi
+          echo "等待 ${cooldown} 秒后重启"
+          sleep "$cooldown"
           gh workflow run daily_scheduler.yml --ref main -f rate_limit_retry=1
 
       - name: Stop after repeated rate limit

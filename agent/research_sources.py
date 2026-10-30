@@ -4,9 +4,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 import re
 import sqlite3
+import sys
 
 import feedparser
 import requests
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+from arxiv_http import get as arxiv_get, ArxivRateLimitError, cooldown_seconds
 
 ARXIV_ID = re.compile(r"(?:\d{4}\.\d{4,5}|[a-z][a-z0-9.-]*/\d{7})(?:v\d+)?", re.I)
 ARXIV_LINK = re.compile(r"https?://(?:www\.)?arxiv\.org/abs/((?:\d{4}\.\d{4,5}|[a-z][a-z0-9.-]*/\d{7})(?:v\d+)?)", re.I)
@@ -74,11 +78,12 @@ def search_arxiv(query, *, sort="relevance", limit=8, start=0, since=None, befor
         first = lower.strftime("%Y%m%d%H%M") if lower else "199101010000"
         last = upper.strftime("%Y%m%d%H%M") if upper else "299912312359"
         expression += " AND submittedDate:[" + first + " TO " + last + "]"
-    with requests.get("https://export.arxiv.org/api/query", params={
+    with arxiv_get("https://export.arxiv.org/api/query", params={
         "search_query": expression, "start": start, "max_results": limit,
         "sortBy": sort, "sortOrder": order},
-        headers={"User-Agent": "MyArxiv-Agent/1.0 (research workflow)"},
-        timeout=30, allow_redirects=False, stream=True) as response:
+        timeout=30, stream=True) as response:
+        if response.status_code == 429:
+            raise ArxivRateLimitError("arXiv 限流，暂时停止在线检索，请稍后重试", cooldown_seconds())
         if response.status_code != 200:
             raise ValueError("arXiv 请求失败")
         chunks = []
