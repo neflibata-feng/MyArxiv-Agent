@@ -6,6 +6,8 @@ import re
 import time
 
 import requests
+from arxiv_http import (ArxivRateLimitError, DEFAULT_USER_AGENT, get as arxiv_get,
+                        backoff as arxiv_backoff, cooldown_seconds)
 
 from typing import Optional, Any, Dict, List
 
@@ -23,10 +25,6 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 _ARXIV_ABS_RE = re.compile(r"arxiv\.org/abs/([^\s\)\]]+)", re.IGNORECASE)
 _CONTROL_CHARS_RE = re.compile(r"[\x00-\x1f\x7f]")
-
-
-class ArxivRateLimitError(RuntimeError):
-    pass
 
 
 def _read_text_if_exists(path: str) -> str:
@@ -241,7 +239,7 @@ def fetch_papers():
     user_agent = get_config_value(
         config,
         "fetch.arxiv_api.http.user_agent",
-        "MyArxiv-Agent/1.0 (+https://github.com/)",
+        DEFAULT_USER_AGENT,
     )
 
     categories = get_config_value(config, "fetch.query.categories", ["cs.AI"])
@@ -292,11 +290,12 @@ def fetch_papers():
                 if elapsed < min_delay:
                     time.sleep(min_delay - elapsed)
 
-            resp = requests.get(
+            resp = arxiv_get(
                 base_url,
                 params=params,
                 timeout=float(timeout_seconds),
                 headers={"User-Agent": str(user_agent)},
+                min_delay=min_delay_seconds,
             )
             last_request_ts = time.time()
             resp.raise_for_status()
@@ -306,13 +305,15 @@ def fetch_papers():
             last_error = None
             break
         except Exception as e:
+            if isinstance(e, ArxivRateLimitError):
+                raise
             last_error = e
             status_code = getattr(getattr(e, "response", None), "status_code", None)
             if status_code == 429:
                 rate_limited_during_retries = True
                 consecutive_rate_limits += 1
                 if consecutive_rate_limits >= 3:
-                    raise ArxivRateLimitError("arXiv API 连续 3 次返回 HTTP 429") from e
+                    raise ArxivRateLimitError("arXiv API 连续 3 次返回 HTTP 429", cooldown_seconds()) from e
             else:
                 consecutive_rate_limits = 0
                 # A timeout or a temporary server failure does not establish that
@@ -325,7 +326,9 @@ def fetch_papers():
                     rate_limited_during_retries = False
             if attempt >= int(retries):
                 break
-            sleep_seconds = float(backoff_seconds) * (2**attempt)
+            sleep_seconds = arxiv_backoff(attempt, backoff_seconds, getattr(e, "response", None))
+            if sleep_seconds > 120:
+                raise ArxivRateLimitError("arXiv 要求较长冷却，暂停本轮请求", sleep_seconds) from e
             try:
                 min_delay = float(min_delay_seconds)
             except Exception:
@@ -337,7 +340,8 @@ def fetch_papers():
     if last_error is not None:
         if rate_limited_during_retries:
             raise ArxivRateLimitError(
-                "arXiv 请求重试耗尽，期间出现 HTTP 429，后续仍限流或发生暂时性网络错误"
+                "arXiv 请求重试耗尽，期间出现 HTTP 429，后续仍限流或发生暂时性网络错误",
+                cooldown_seconds(),
             ) from last_error
         raise RuntimeError(f"获取 arXiv 数据失败: {last_error}") from last_error
 
@@ -590,4 +594,8 @@ if __name__ == "__main__":
         update_inbox(papers)
     except ArxivRateLimitError as error:
         print(error)
+        output_path = os.environ.get("GITHUB_OUTPUT")
+        if output_path:
+            with open(output_path, "a", encoding="utf-8") as output:
+                output.write(f"retry_after_seconds={error.retry_after_seconds}\n")
         raise SystemExit(75)

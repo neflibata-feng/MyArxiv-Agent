@@ -11,7 +11,7 @@ import requests
 import yaml
 from library_index import search as search_library
 
-from research_sources import collect_sources, get_papers, normalize_id, pending_papers, provenance, search_arxiv
+from research_sources import ArxivRateLimitError, collect_sources, get_papers, normalize_id, pending_papers, provenance, search_arxiv
 
 ROOT = Path(__file__).resolve().parent.parent
 MAX_BUDGET = 1_000_000
@@ -91,7 +91,7 @@ def execute_tool(name: str, args: dict, root: Path = ROOT) -> str:
                 raise ValueError("笔记超过 100 KB")
             return json.dumps({"path": args["path"], "content": path.read_text(encoding="utf-8")}, ensure_ascii=False)
         raise ValueError("未知工具或无效参数")
-    except (OSError, ValueError, TypeError, sqlite3.Error, yaml.YAMLError, requests.RequestException):
+    except (OSError, ValueError, TypeError, sqlite3.Error, yaml.YAMLError, requests.RequestException, ArxivRateLimitError):
         return json.dumps({"error": "无法读取资料，请检查工具参数、配置和本地数据。"}, ensure_ascii=False)
 
 
