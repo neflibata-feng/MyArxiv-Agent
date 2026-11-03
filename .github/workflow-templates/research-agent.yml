@@ -1,10 +1,15 @@
 name: Research Agent
+run-name: "Research · ${{ inputs.operation || 'recommend' }} · ${{ inputs.request_id || github.run_number }}"
 
 on:
   schedule:
     - cron: '10 2 * * *'
   workflow_dispatch:
     inputs:
+      request_id:
+        description: 网页生成的请求编号（手动运行可留空）
+        type: string
+        required: false
       operation:
         description: recommend 推荐 / feedback 学习反馈 / research 研究 / review 综述 / approve 确认保存 / tasks 任务中心 / retry 重试
         type: choice
@@ -36,7 +41,11 @@ on:
       budget:
         description: 本次累计 token 预算（1 至 1000000，仅研究/综述调用模型）
         type: string
-        default: '1000000'
+        default: ''
+
+concurrency:
+  group: research-agent-${{ inputs.request_id || github.run_id }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -57,21 +66,34 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: pip
+          cache-dependency-path: scripts/requirements.txt
       - name: 安装依赖
         run: python -m pip install -r scripts/requirements.txt
+      - name: 校验运行配置
+        id: settings
+        run: |
+          python - <<'PY'
+          import os, sys, yaml
+          sys.path.insert(0, 'agent')
+          from model_config import settings
+          config = yaml.safe_load(open('config.yaml', encoding='utf-8')) or {}
+          value = settings(config)
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('secret_name=' + value['key_secret'] + '\n')
+          PY
       - name: 运行研究系统
         env:
-          key: ${{ secrets.key }}
+          key: ${{ secrets[steps.settings.outputs.secret_name] }}
           GH_TOKEN: ${{ github.token }}
-          DEEPSEEK_MODEL: deepseek-flash
-          DEEPSEEK_BASE_URL: ${{ vars.DEEPSEEK_BASE_URL || 'https://api.deepseek.com' }}
+          RESEARCH_REQUEST_ID: ${{ inputs.request_id }}
           RESEARCH_OPERATION: ${{ inputs.operation || 'recommend' }}
           RESEARCH_QUESTION: ${{ inputs.question }}
           RESEARCH_PAPER_IDS: ${{ inputs.paper_ids }}
           RESEARCH_FEEDBACK: ${{ inputs.feedback || 'like' }}
           RESEARCH_TARGET: ${{ inputs.target }}
           RESEARCH_RANKING: ${{ inputs.ranking || 'personalized' }}
-          RESEARCH_BUDGET: ${{ inputs.budget || '1000000' }}
+          RESEARCH_BUDGET: ${{ inputs.budget }}
           RESEARCH_OUTPUT: ${{ runner.temp }}/research-results
         run: python agent/system_action.py
       - name: 保存研究结果与任务记录

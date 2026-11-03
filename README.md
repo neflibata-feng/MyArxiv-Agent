@@ -3,7 +3,7 @@
 
 # MyArxiv-Agent
 
-由 [@neflibata-feng](https://github.com/neflibata-feng) 开发的开源 arXiv 论文个人知识空间：按关注领域抓取论文，在收件箱筛选，将论文归档并建立阅读笔记，也可以通过网页管理仓库内容。
+由 [@neflibata-feng](https://github.com/neflibata-feng) 开发的开源 arXiv 论文个人知识空间：抓取、筛选和归档论文，管理阅读笔记，并通过完整的研究 Agent 完成个性化推荐、资料检索、研究问答和综述草稿。
 
 本仓库提供代码和空白起点，不维护个人论文库。欢迎提交 Issue、Pull Request 和文档改进，或提出新的功能建议。
 
@@ -24,7 +24,7 @@
 
 ### 2. 安装依赖
 
-安装 Python 3.9 或更新版本，在仓库根目录创建虚拟环境并安装依赖：
+安装 Python 3.11 或更新版本，在仓库根目录创建虚拟环境并安装依赖：
 
 ```bash
 python -m venv .venv
@@ -122,16 +122,108 @@ Windows 用户也可以在文件管理器中复制文件后再提交。模板默
 
 1. 在 GitHub 个人设置中打开 **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**。
 2. 为令牌设置名称和合理的有效期；在 **Repository access** 中选择 **Only select repositories**，只选你的论文仓库。
-3. 在仓库权限中授予 **Contents: Read and write**。生成后妥善保存，令牌通常只会完整显示一次。
+3. 在仓库权限中授予 **Contents: Read and write**；使用研究助手时增加 **Actions: Read and write**，创建笔记 PR 时增加 **Pull requests: Read and write**。生成后妥善保存，令牌通常只会完整显示一次。
 4. 打开你部署的网页，在登录页填写 `你的用户名/仓库名` 和令牌，然后连接。网页默认访问 `main`；读取或保存失败时，请检查仓库名、令牌权限和有效期。
 
 网页会把令牌保存在浏览器本地，请只在可信设备上使用；不要把令牌写入文件或提交。
 
-## GitHub Actions 论文研究系统（开发中）
+## 研究助手
+
+研究助手在 GitHub Actions 中执行任务，网页用于配置、发起研究和查看结果。支持基于兴趣与可撤销反馈的论文推荐、本地资料与 arXiv 检索、研究问答、结构化综述，以及确认后创建笔记 PR。
+
+### 启用
+
+将研究工作流复制到活动目录，提交到仓库默认分支：
+
+```bash
+cp .github/workflow-templates/research-agent.yml .github/workflows/
+git add .github/workflows/research-agent.yml
+git commit -m "ci:启用研究助手"
+git push origin main
+```
+
+1. 在仓库 **Settings → Secrets and variables → Actions** 添加模型密钥，默认名称为小写 `key`。
+2. 在 **Settings → Actions → General** 允许工作流写入仓库；需要保存综述时，开启 **Allow GitHub Actions to create and approve pull requests**。
+3. 网页连接仓库的 PAT 需有 **Contents: Read and write**、**Actions: Read and write**；保存笔记 PR 还需 **Pull requests: Read and write**。
+4. 打开网页 **研究助手 → 研究配置**，保存模型、预算、兴趣和订阅，然后刷新状态。点击“测试模型连接”验证实际调用，结果显示在任务列表。
+
+### 配置
+
+网页支持 DeepSeek、OpenAI 和提供 OpenAI 兼容接口的服务。兼容服务须支持 Chat Completions、工具调用、JSON 输出及 token 用量报告。按供应商要求填写 API 基础地址和模型名称；不要在地址末尾添加 `/chat/completions`。
+
+密钥名称必须与 Actions secret 一致。网页只保存名称；API 密钥在 GitHub Secrets 中管理，不写入配置文件。切换供应商后，需为对应名称配置密钥。
+
+配置保存在 `config.yaml` 的 `agent` 下，运行时从仓库读取：
+
+```yaml
+agent:
+  runtime:
+    provider: deepseek          # deepseek / openai / compatible
+    base_url: https://api.deepseek.com
+    model: deepseek-flash
+    key_secret: key             # Actions secret 名称
+    default_budget: 50000       # 单任务累计 token 预算
+    max_budget: 1000000         # 单任务可设置的上限
+    max_output_tokens: 4096     # 单次请求最大输出
+    max_rounds: 12              # 最大模型请求轮数
+    timeout_seconds: 90         # 单次请求超时
+  interests:
+    - multi agent collaboration
+  subscriptions:
+    - id: multi-agent
+      query: multi agent collaboration
+      enabled: true
+```
+
+预算包含一次任务中所有模型请求的输入和输出，不是账户金额上限；默认值不能超过任务上限。仅研究问答和综述调用模型。用量依赖供应商统计，缺少有效用量报告时任务停止。
+
+订阅与原有 `fetch.query` 独立。查询使用普通短语；最多 10 个主题，每主题每次最多读取 3 页、每页 100 条。首次从历史窗口开始，后续根据游标继续，跨主题按基础 arXiv ID 去重。定时推荐默认关闭；在 Actions variables 设置 `RESEARCH_SCHEDULE_ENABLED=true` 后，每天北京时间 10:10 执行。
+
+### 使用流程
+
+1. **论文推荐**：读取待处理论文和启用的订阅，展示推荐理由。喜欢、不喜欢及撤销反馈会影响后续排序，不训练模型。推荐结果不会自动加入 Inbox。
+2. **研究问答**：输入研究问题，可选最多 10 个仓库中的 arXiv ID，调整本次预算后运行。模型可检索论文、已有笔记和本地全文，并在线搜索 arXiv 元数据。
+3. **生成综述**：按问题整理方法、结果与局限；引用须来自本次检索。打开任务的“审阅完整草稿”，核验后点击“创建笔记 PR”，再到 GitHub 审查合并。
+4. **查看任务**：网页每 15 秒刷新状态，展示报告、用量、来源和工具调用。失败的推荐、研究与综述支持重试；执行中的任务可请求取消。完整日志和附件从“运行详情”查看。
+
+也可在 **Actions → Research Agent → Run workflow** 手动选择 `recommend`、`feedback`、`research`、`review`、`approve`、`tasks` 或 `retry`。`budget` 留空时使用默认预算；`approve` 的目标是报告中的草稿 ID。抓取／归档失败任务的重试目标格式为 `actions:运行编号`。
+
+### 数据与边界
+
+- 论文数据库为 `data/arxiv.db`。索引读取配置目录内的 Markdown、文本、可提取文字的 PDF 和论文摘要，最多 2,000 个片段；不提供 OCR，也不自动下载网页或付费全文。
+- 反馈、订阅进度、任务与草稿保存于 `agent-state` 分支的 `data/agent-state.json`。状态上限为 900 KB，旧缓存、草稿和任务会被清理，显式反馈不自动删除。Actions 附件保留 7 天；网页报告过长时截断，完整报告见附件。
+- 问题及检索到的资料会发送给所选模型服务。状态和附件受仓库可见性控制。
+- 来源检查仅确认本次取得了对应记录，不证明研究结论正确。笔记通过 PR 保存，工作流不自动合并。
+- Actions 受 GitHub 排队、仓库权限和供应商限流影响。密钥无效、余额不足、预算不足、超时等错误会显示在任务或运行日志中。工作流总时限为 25 分钟。
+
+
+### 本地运行网页
+
+安装 Node.js 20 或更新版本，在仓库根目录执行：
+
+```bash
+cd web
+npm ci
+npm run dev
+```
+
+打开终端显示的地址，连接自己的论文仓库。网页本地运行时，研究任务仍在 GitHub Actions 中执行，密钥仍配置在该仓库的 Actions secrets 中。生产构建使用 `npm run build`，预览使用 `npm run preview`。
+
+### 常见问题
+
+| 现象 | 处理方法 |
+| --- | --- |
+| 研究助手显示未启用或版本过旧 | 将最新 `research-agent.yml` 模板复制到活动目录并提交到默认分支，在 Actions 中启用后刷新网页状态 |
+| 401、403、无法启动任务或创建 PR | 检查 PAT 的有效期、仓库范围与 Contents / Actions / Pull requests 权限，以及 Actions 的写入和创建 PR 设置 |
+| 模型连接失败 | 检查 secret 名称大小写、模型名称、基础地址、余额及供应商是否支持工具调用和用量报告；连接测试本身会消耗 token |
+| 预算不足或研究超时 | 缩小问题范围、减少指定论文，或在配置上限内增加任务预算后重试；工作流时限为 25 分钟 |
+| arXiv 返回 429 | 等待日志中提示的冷却时间，避免连续手动重启；抓取最多自动重启一次，长期限流需稍后重试 |
+| 页面没有完整报告或历史草稿消失 | 打开任务对应的 Actions 运行下载附件；附件保留 7 天，状态分支会清理旧记录 |
 
 ## 项目结构
 
 - `scripts/`：抓取、收件箱处理和 SQLite 初始化脚本。
+- `agent/`：模型配置、工具检索、推荐反馈、订阅、任务状态和综述 PR 实现；`skills/` 内附研究技能资料。
 - `config.yaml`：查询、路径、格式和存储配置。
 - `Inbox.md`、`Contents.md`：收件箱与归档索引的空白起点。
 - `Papers/`、`Notes/`：论文元数据与阅读笔记；`data/arxiv.db` 在初始化时创建。

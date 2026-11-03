@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { 
   BookOpen, Home, Calendar, Archive, Monitor, Settings,
-  LogOut, Search, X
+  LogOut, Search, X, Sparkles
 } from 'lucide-react'
 import { GithubClient } from '@/lib/github'
 import { Button } from '@/components/ui/button'
@@ -17,7 +17,9 @@ const WorkbenchView = React.lazy(() => import('@/views/Workbench').then(module =
 const SettingsView = React.lazy(() => import('@/views/Settings').then(module => ({ default: module.SettingsView })))
 import { I18N, Lang } from '@/i18n/locales'
 
-type Tab = 'home' | 'inbox' | 'archive' | 'workbench' | 'settings'
+const ResearchView = React.lazy(() => import('@/views/Research').then(module => ({ default: module.ResearchView })))
+
+type Tab = 'research' | 'home' | 'inbox' | 'archive' | 'workbench' | 'settings'
 
 function App() {
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => (localStorage.getItem('app_theme') as any) || 'system')
@@ -150,6 +152,7 @@ function App() {
            <NavButton icon={<Calendar/>} label={t.inbox} active={activeTab === 'inbox'} onClick={() => setActiveTab('inbox')} />
            <NavButton icon={<Archive/>} label={t.archive} active={activeTab === 'archive'} onClick={() => setActiveTab('archive')} />
            <NavButton icon={<Monitor/>} label={t.workbench} active={activeTab === 'workbench'} onClick={() => setActiveTab('workbench')} />
+           <NavButton icon={<Sparkles/>} label={lang === 'zh' ? '研究助手' : 'Research'} active={activeTab === 'research'} onClick={() => setActiveTab('research')} />
         </nav>
 
         <div className={cn("flex items-center gap-2", mobileSearchOpen ? "flex-1 min-w-0" : "ml-auto")}>
@@ -199,6 +202,7 @@ function App() {
          {activeTab === 'inbox' && <InboxView client={client} t={t} searchTerm={searchTerm} />}
         {activeTab === 'archive' && <ArchiveView client={client} t={t} searchTerm={searchTerm} config={config} />}
         {activeTab === 'workbench' && <WorkbenchView client={client} t={t} searchTerm={searchTerm} config={config} />}
+         {activeTab === 'research' && <ResearchView key={repoStr} client={client} lang={lang} />}
          {activeTab === 'settings' && <SettingsView client={client} t={t} appConfig={{theme, setTheme, lang, setLang}} globalConfig={config} setGlobalConfig={setConfig} />}
          </React.Suspense>
       </main>
