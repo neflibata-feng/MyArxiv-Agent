@@ -52,7 +52,7 @@ export class GithubClient {
     this.branch = branch;
   }
 
-  researchClient() { return new ResearchClient(this.octokit, this.owner, this.repo); }
+  researchClient() { return new ResearchClient(this.octokit, this.owner, this.repo, () => this.clearCache()); }
 
   clearCache() {
     this.cache.clear();

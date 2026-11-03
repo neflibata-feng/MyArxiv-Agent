@@ -67,7 +67,7 @@ export function validateInput(input: ResearchInput) {
 export class ResearchClient {
   readonly url: string
   private ref?: string
-  constructor(private api: Octokit, private owner: string, private repo: string) { this.url = `https://github.com/${owner}/${repo}` }
+  constructor(private api: Octokit, private owner: string, private repo: string, private onPreferencesSaved: () => void = () => {}) { this.url = `https://github.com/${owner}/${repo}` }
   private get params() { return { owner: this.owner, repo: this.repo } }
   private async branch() {
     if (!this.ref) this.ref = (await this.api.rest.repos.get(this.params)).data.default_branch
@@ -118,5 +118,6 @@ export class ResearchClient {
     const previous = config.agent && typeof config.agent === 'object' ? config.agent : {}
     config.agent = { ...previous, ...value }
     await this.api.rest.repos.createOrUpdateFileContents({ ...this.params, branch: await this.branch(), path: 'config.yaml', sha: original.sha, content: encode(yaml.dump(config, { lineWidth: -1 })), message: 'feat:更新研究配置' })
+    this.onPreferencesSaved()
   }
 }
