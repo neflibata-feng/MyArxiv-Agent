@@ -10,6 +10,8 @@ import time
 from urllib.parse import quote
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from learning import default_state, ID
 
 # Keep the contents API's inline base64 representation available (< 1 MB).
@@ -88,6 +90,10 @@ class StateStore:
         if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', self.repo) or not token:
             raise ValueError('缺少 GitHub 仓库或状态存储令牌')
         self.session = requests.Session()
+        # Retry reads only. Replaying writes may duplicate a PR or task.
+        self.session.mount('https://', HTTPAdapter(max_retries=Retry(
+            total=2, backoff_factor=0.5, status_forcelist=[429, 502, 503, 504],
+            allowed_methods=['GET'], respect_retry_after_header=False)))
         self.session.headers.update({'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json'})
         self.base = 'https://api.github.com/repos/' + self.repo
 

@@ -148,6 +148,16 @@ archive:
 
 # GitHub Actions 研究系统：显式兴趣、可撤销反馈与独立主题订阅
 agent:
+  runtime:
+    provider: deepseek
+    base_url: https://api.deepseek.com
+    model: deepseek-flash
+    key_secret: key
+    default_budget: 50000
+    max_budget: 1000000
+    max_output_tokens: 4096
+    max_rounds: 12
+    timeout_seconds: 90
   interests: []
   subscriptions:
     - id: multi-agent

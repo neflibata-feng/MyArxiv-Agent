@@ -1,4 +1,5 @@
 import { Octokit } from "octokit";
+import { ResearchClient } from "./research";
 
 function encodeBase64(content: string): string {
   const bytes = new TextEncoder().encode(content);
@@ -50,6 +51,8 @@ export class GithubClient {
     this.repo = repo;
     this.branch = branch;
   }
+
+  researchClient() { return new ResearchClient(this.octokit, this.owner, this.repo); }
 
   clearCache() {
     this.cache.clear();

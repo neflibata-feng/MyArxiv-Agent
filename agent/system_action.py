@@ -12,6 +12,7 @@ import sys
 import time
 
 import yaml
+from model_config import settings
 from draft_approval import approve
 from learning import feedback, rank
 from library_index import build, within
@@ -31,10 +32,11 @@ def now():
 
 
 def safe(value):
-    key = os.environ.get('key', '')
     text = json.dumps(value, ensure_ascii=False)
-    if key:
-        text = text.replace(json.dumps(key, ensure_ascii=False)[1:-1], '[已隐藏]')
+    for name in ('key', 'GH_TOKEN', 'GITHUB_TOKEN'):
+        key = os.environ.get(name, '')
+        if key:
+            text = text.replace(json.dumps(key, ensure_ascii=False)[1:-1], '[已隐藏]')
     return json.loads(text)
 
 
@@ -42,7 +44,8 @@ def md(value):
     return re.sub(r'([\\`*_{}\[\]#|])', r'\\\1', html.escape(str(value))).replace('\n', ' ')
 
 
-def inputs():
+def inputs(cfg=None):
+    runtime = settings(cfg or {})
     operation = os.environ.get('RESEARCH_OPERATION', 'recommend')
     if operation not in OPERATIONS:
         raise ValueError('未知研究操作')
@@ -50,9 +53,9 @@ def inputs():
     ids = [normalize_id(x) for x in raw_ids.split(',')] if raw_ids else []
     if len(ids) > 10 or any(x is None for x in ids):
         raise ValueError('请填写最多 10 个有效 arXiv ID')
-    raw_budget = os.environ.get('RESEARCH_BUDGET') or '1000000'
-    if not raw_budget.isascii() or not raw_budget.isdigit() or len(raw_budget) > 7 or not 1 <= int(raw_budget) <= 1_000_000:
-        raise ValueError('token 预算须为 1 到 1000000 之间的整数')
+    raw_budget = os.environ.get('RESEARCH_BUDGET') or str(runtime['default_budget'])
+    if not raw_budget.isascii() or not raw_budget.isdigit() or len(raw_budget) > 7 or not 1 <= int(raw_budget) <= runtime['max_budget']:
+        raise ValueError('token 预算须为 1 到 ' + str(runtime['max_budget']) + ' 之间的整数')
     question = os.environ.get('RESEARCH_QUESTION', '').strip()
     if len(question.encode()) > 20000:
         raise ValueError('研究问题超过 20 KB')
@@ -80,6 +83,7 @@ def config(root):
     interests = options.get('interests', [])
     if not isinstance(interests,list) or len(interests)>30 or any(not isinstance(x,str) or len(x)>100 for x in interests):
         raise ValueError('agent.interests 须为最多 30 个兴趣短语')
+    settings(data)
     return data
 
 
@@ -97,6 +101,16 @@ def local_papers(root, cfg):
 def persist(store, mutate):
     def bounded(current):
         mutate(current)
+        # Shed old web previews before deleting useful feedback/catalog metadata.
+        # Full reports remain in the Actions artifacts for their retention period.
+        for old in current.get('runs', [])[:-1]:
+            if len(json.dumps(current, ensure_ascii=False).encode()) <= 750_000:
+                break
+            if 'report' in old:
+                old.pop('report')
+                old['report_truncated'] = True
+            if isinstance(old.get('trace'), dict):
+                old['trace'].pop('recommendations', None)
         # Explicit user feedback is never silently discarded. Evict only rebuildable
         # metadata, old drafts and task history before exceeding the API size limit.
         for field, minimum in [('catalog', 0), ('drafts', 1), ('runs', 5)]:
@@ -166,6 +180,7 @@ def execute(args, cfg, state, store, root, output, run_id, trace):
         return '# 反馈已保存\n\n'+md(paper_id)+'：'+args['rating']+'。后续推荐会使用更新后的反馈。\n'
     if op=='approve':
         result=approve(store,args['target'],cfg)
+        trace['pull_request']=result['url']
         return '# 综述已提交待审查\n\nPR：'+result['url']+'\n'
     if op=='tasks':
         lines=['# 任务运行中心','','兴趣：'+md(', '.join(cfg.get('agent',{}).get('interests',[])))+'；显式论文反馈 '+str(len(state['feedback']))+' 条','','## 研究系统任务','']
@@ -177,6 +192,9 @@ def execute(args, cfg, state, store, root, output, run_id, trace):
         papers,progress,report=collect(cfg,state,args['target'])
         unique={normalize_id(p['arxiv_id']):p for p in [*local_papers(root,cfg),*papers] if normalize_id(p.get('arxiv_id'))}
         ranked=rank(list(unique.values()),cfg.get('agent',{}).get('interests',[]),state,args['ranking']=='personalized')
+        # Keep a compact result for the web workbench; the artifact retains all candidates.
+        trace['recommendations'] = [{**{k:str(p.get(k) or '')[:1200] for k in ('arxiv_id','title','summary','published_at')}, 'score':p['score'], 'reasons':p['reasons']} for p in ranked[:30]]
+        trace['recommendation_count'] = len(ranked)
         result={'ranking':args['ranking'],'papers':ranked,'subscriptions':report}
         (output/'recommendations.json').write_text(json.dumps(safe(result),ensure_ascii=False,indent=2),encoding='utf-8')
         lines=['# 论文推荐','','排序：'+args['ranking']+'；根据显式兴趣与反馈调整，不修改模型参数。','']
@@ -219,14 +237,17 @@ def execute(args, cfg, state, store, root, output, run_id, trace):
 
 def main():
     started=time.monotonic(); args=None; trace={}; store=None
-    run_id=os.environ.get('GITHUB_RUN_ID','0')+'-'+os.environ.get('GITHUB_RUN_ATTEMPT','1')
+    run_id=os.environ.get('GITHUB_RUN_ID',str(time.time_ns()))+'-'+os.environ.get('GITHUB_RUN_ATTEMPT','1')
     output=Path(os.environ.get('RESEARCH_OUTPUT',os.environ.get('RUNNER_TEMP','/tmp')+'/research-results'))
     output.mkdir(parents=True,exist_ok=True)
     record={'id':run_id,'started_at':now(),'status':'running','operation':'invalid'}
     code=0
     try:
-        args=inputs();record.update(operation=args['operation'],inputs=safe(args))
-        cfg=config(ROOT);store=StateStore()
+        request_id=os.environ.get('RESEARCH_REQUEST_ID','')
+        if request_id and not re.fullmatch(r'[a-zA-Z0-9-]{1,64}', request_id):
+            raise ValueError('请求编号无效')
+        cfg=config(ROOT);args=inputs(cfg);record.update(operation=args['operation'],inputs=safe(args),request_id=request_id)
+        store=StateStore()
         state,_=store.load()
         def start(current):
             current['runs']=[r for r in current['runs'] if r['id']!=run_id][-99:]+[record]
@@ -244,13 +265,16 @@ def main():
         record.update(requested_operation='retry',operation=effective['operation'],inputs=effective)
     record.update(ended_at=now(),elapsed_seconds=round(time.monotonic()-started,2),used_tokens=trace.get('used_tokens',0),trace=safe(trace))
     record=safe(record);answer=safe(answer)
+    # Bound UTF-8 bytes, not characters, so the last five reports fit the state budget.
+    record['report'] = answer.encode('utf-8')[:24000].decode('utf-8', errors='ignore')
+    record['report_truncated'] = len(answer.encode('utf-8')) > 24000
     try:
         if store:
             def finish(current):
                 current['runs']=[r for r in current['runs'] if r['id']!=run_id][-99:]+[record]
             persist(store, finish)
     except Exception:
-        code=1;answer+='\n任务记录未能持久保存；现有研究状态未被覆盖，请查看本次附件。\n'
+        code=1;record['status']='failed';record['error']='任务结果未能持久保存，请查看本次附件';answer+='\n任务记录未能持久保存；现有研究状态未被覆盖，请查看本次附件。\n'
     (output/'report.md').write_text(answer,encoding='utf-8')
     (output/'run.json').write_text(json.dumps(record,ensure_ascii=False,indent=2),encoding='utf-8')
     summary=os.environ.get('GITHUB_STEP_SUMMARY')

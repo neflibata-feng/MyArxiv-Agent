@@ -147,9 +147,114 @@ Create a fine-grained PAT in GitHub personal settings, restrict it to your paper
 
 The browser stores the PAT locally. Use a trusted device and never commit it.
 
-## GitHub Actions research system (in development)
+## Research assistant
+
+Research tasks run in GitHub Actions. The web client configures the model, submits tasks, and displays results. Features include interest-based paper recommendations, reversible feedback, local and arXiv retrieval, research answers, structured reviews, and explicit approval to create a note PR.
+
+### Enable the workflow
+
+If `research-agent.yml` is not already active, copy it into `.github/workflows/` and commit it to the default branch:
+
+```bash
+cp .github/workflow-templates/research-agent.yml .github/workflows/
+git add .github/workflows/research-agent.yml
+git commit -m "ci:启用研究助手"
+git push origin main
+```
+
+1. In **Settings → Secrets and variables → Actions**, add your model API key. The default secret name is lowercase `key`.
+2. In **Settings → Actions → General**, allow workflow content writes. To save review notes, enable **Allow GitHub Actions to create and approve pull requests**. The application creates PRs but does not approve or merge them.
+3. Give the web client's PAT **Contents: Read and write**, **Actions: Read and write**, and **Pull requests: Read and write** when creating note PRs.
+4. Open the **Research** tab, then **Research settings** (UI label: `研究配置`). Save your model, budget, interests, and subscriptions. Refresh the workflow status, then use **Test model connection** (`测试模型连接`) to verify an actual request; its result appears as a task.
+
+### Model and budget settings
+
+Choose DeepSeek, OpenAI, or an OpenAI-compatible service. The service must support Chat Completions, tool calls, JSON output, and token usage reports. Enter the provider's API base URL and model name; include `/v1` if required, but do not append `/chat/completions`.
+
+The configured secret name must match a GitHub Actions secret. Only the name is saved in configuration; manage the key itself in GitHub Secrets. After switching providers, add the key under the new secret name before testing.
+
+The web client writes settings under `agent` in `config.yaml`; the runner reads them at task startup:
+
+```yaml
+agent:
+  runtime:
+    provider: deepseek          # deepseek / openai / compatible
+    base_url: https://api.deepseek.com
+    model: deepseek-flash
+    key_secret: key             # Actions secret name, not the API key
+    default_budget: 50000       # Cumulative tokens per task
+    max_budget: 1000000         # Maximum allowed task budget
+    max_output_tokens: 4096     # Maximum output per model request
+    max_rounds: 12              # Maximum model request rounds
+    timeout_seconds: 90         # Timeout per model request
+  interests:
+    - multi agent collaboration
+  subscriptions:
+    - id: multi-agent
+      query: multi agent collaboration
+      enabled: true
+```
+
+A task budget covers input and output across all model requests in that task. It is not a monetary or account-wide spending cap. The default must not exceed the task maximum. Recommendations and feedback do not call the model; research and reviews do. Tasks stop if the provider does not report valid usage.
+
+Subscriptions are independent of `fetch.query`. Use plain phrases, not raw arXiv query expressions. Up to 10 topics are supported, with at most three pages of 100 records per topic per run. Initial scans start from historical records, then continue from saved cursors; results are deduplicated across topics by base arXiv ID. Scheduled recommendations remain disabled unless the Actions variable `RESEARCH_SCHEDULE_ENABLED` is set to `true`. The schedule is 02:10 UTC (10:10 China Standard Time).
+
+### Daily workflow
+
+1. **Recommend papers**: combine pending papers with enabled subscription results and show ranking reasons. Like, dislike, and clear-feedback actions affect future rankings without training the model. Recommendations are not automatically added to Inbox.
+2. **Ask a research question**: enter a question, optionally select up to 10 arXiv IDs already in the repository database, and set the task budget. Tools can search metadata, notes, indexed local text, and online arXiv metadata. Supplying an ID does not download or import a paper.
+3. **Generate a review**: request a comparison of methods, results, and limitations. References must come from the current retrieval. Open **Review full draft** (`审阅完整草稿`), check the evidence, and confirm to create a note PR. Review and merge that PR on GitHub.
+4. **Track tasks**: while visible, the page refreshes every 15 seconds. View the report, usage, sources, and tool results; download Markdown or open the Actions run for logs and artifacts. Failed or partial recommendation, research, and review tasks can be retried. Running tasks can be cancelled; wait for GitHub to confirm the result.
+
+You can also use **Actions → Research Agent → Run workflow**:
+
+| Operation | Inputs |
+| --- | --- |
+| `recommend` | Optional topic ID in `target`; `ranking=date` restores date order |
+| `feedback` | One `paper_ids` value and `feedback=like`, `dislike`, or `clear` |
+| `research` | `question`, optional `paper_ids`, optional `budget` |
+| `review` | Same inputs as research; produces a draft for inspection |
+| `approve` | Draft ID in `target`; creates a note PR |
+| `tasks` | No additional inputs |
+| `retry` | Failed task ID in `target`, optionally a new budget |
+
+Leave `budget` empty to use the configured default. To retry an eligible failed fetch/archive workflow, use `actions:RUN_ID` as the target. Feedback and approval operations are not replayed by retry.
+
+### Storage and limits
+
+- `data/arxiv.db` stores paper metadata and processing state. Retrieval indexes configured Markdown, text, text-extractable PDFs, and abstracts, up to 2,000 chunks. It does not perform OCR or automatically download arbitrary websites or paid full text.
+- Feedback, subscription progress, recent tasks, and drafts are stored in `data/agent-state.json` on the `agent-state` branch. State is limited to 900 KB; old previews, cache entries, drafts, and task records may be removed. Explicit feedback is not automatically deleted.
+- Actions artifacts are retained for seven days. Long web reports are truncated; use the run artifact for the full output. A successful approval creates `Notes/Research-DRAFT_ID.md` on a dedicated branch and opens a PR.
+- Questions and retrieved material are sent to the selected model provider. Stored state and artifacts follow repository visibility.
+- Source validation confirms that a record was retrieved, not that a conclusion is correct. All research claims still require human review.
+- Actions depends on GitHub scheduling, permissions, and provider availability. Invalid credentials, insufficient funds or budget, timeouts, and rate limits appear in task results or run logs. The workflow timeout is 25 minutes.
+
+### Run the web client locally
+
+Install Node.js 20 or later, then run from the repository root:
+
+```bash
+cd web
+npm ci
+npm run dev
+```
+
+Open the URL printed by Vite and connect your own paper repository. Research tasks still execute in GitHub Actions, with API keys stored in that repository's Actions secrets. Use `npm run build` for a production build and `npm run preview` to preview it.
+
+### Troubleshooting
+
+| Symptom | Action |
+| --- | --- |
+| Research workflow disabled or outdated | Copy the latest `research-agent.yml` template into the active directory, commit to the default branch, enable it in Actions, and refresh the page |
+| 401/403, dispatch or PR creation fails | Check PAT expiration, repository access, Contents / Actions / Pull requests permissions, and Actions write/PR settings |
+| Model connection fails | Check the exact secret name, model, base URL, balance, tool-call support, and usage reporting; the connection test consumes tokens |
+| Budget exhausted or research times out | Narrow the question, select fewer papers, or retry with a larger budget within the configured limit; the workflow timeout is 25 minutes |
+| arXiv returns 429 | Respect the logged cooldown and avoid repeated manual restarts; fetching automatically restarts at most once |
+| Report truncated or old drafts missing | Download the run artifact for the full report; artifacts expire after seven days and old state records are pruned |
 
 ## Project layout
+
+- `agent/`: model settings, retrieval tools, recommendations, feedback, subscriptions, task state, and review PRs; `skills/` contains research skill resources.
 
 - `scripts/`: fetching, inbox processing, SQLite initialization, and arXiv HTTP utilities.
 - `config.yaml`: queries, storage, paths, and rendering settings.
